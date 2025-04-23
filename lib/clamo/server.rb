@@ -41,7 +41,7 @@ module Clamo
         when Array
           object.send method.to_sym, *params
         when Hash
-          object.send method.to_sym, **params
+          object.send method.to_sym, **(params.transform_keys(&:to_sym))
         when NilClass
           object.send method.to_sym
         else
@@ -83,6 +83,13 @@ module Clamo
           return JSONRPC.build_error_response_from(
             id: request["id"],
             descriptor: JSONRPC::ProtocolErrors::INVALID_REQUEST
+          )
+        end
+
+        unless JSONRPC.valid_params?(request)
+          return JSONRPC.build_error_response_from(
+            id: request["id"],
+            descriptor: JSONRPC::ProtocolErrors::INVALID_PARAMS
           )
         end
 

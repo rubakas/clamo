@@ -37,7 +37,7 @@ module Clamo
 
       def proper_params_if_any?(request)
         if request.key?("params")
-          request["params"].is_a?(Array)
+          request["params"].is_a?(Array) || request["params"].is_a?(Hash)
         else
           true
         end
@@ -47,8 +47,11 @@ module Clamo
         request.is_a?(Hash) &&
           proper_pragma?(request) &&
           proper_method?(request) &&
-          proper_id_if_any?(request) &&
-          proper_params_if_any?(request)
+          proper_id_if_any?(request)
+      end
+
+      def valid_params?(request)
+        proper_params_if_any?(request)
       end
 
       def build_request **opts
