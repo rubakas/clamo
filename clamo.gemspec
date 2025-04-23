@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "JSON-RPC Client/Server tooling for Ruby"
   spec.description = "JSON-RPC Client/Server tooling for Ruby"
-  spec.homepage = "https://github.com/andriytyurnikov/clamo"
+  spec.homepage = "https://github.com/rubakas/clamo"
   spec.required_ruby_version = ">= 3.0.0"
 
   # spec.metadata["allowed_push_host"] = "TODO: Set to your gem server 'https://example.com'"
