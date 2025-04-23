@@ -41,7 +41,7 @@ module Clamo
         when Array
           object.send method.to_sym, *params
         when Hash
-          object.send method.to_sym, **(params.transform_keys(&:to_sym))
+          object.send method.to_sym, **params.transform_keys(&:to_sym)
         when NilClass
           object.send method.to_sym
         else

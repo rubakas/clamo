@@ -136,12 +136,14 @@ class TestServer < Minitest::Test
   end
 
   def test_one_params_result_object_non_empty
-    with_request({ "jsonrpc" => "2.0", "method" => "method_one_params_echo", "params" => [{"e" => "cho"}], "id" => 1 })
-    assert_equal({ jsonrpc: "2.0", result: {"e" => "cho"}, id: 1 }, @response)
+    with_request({ "jsonrpc" => "2.0", "method" => "method_one_params_echo", "params" => [{ "e" => "cho" }],
+                   "id" => 1 })
+    assert_equal({ jsonrpc: "2.0", result: { "e" => "cho" }, id: 1 }, @response)
   end
 
   def test_one_param_result_named
-    with_request({ "jsonrpc" => "2.0", "method" => "method_one_named_params_echo", "params" => {"named" => "value"}, "id" => 1 })
+    with_request({ "jsonrpc" => "2.0", "method" => "method_one_named_params_echo", "params" => { "named" => "value" },
+                   "id" => 1 })
     assert_equal({ jsonrpc: "2.0", result: "value", id: 1 }, @response)
   end
 
@@ -162,22 +164,21 @@ class TestServer < Minitest::Test
 
   def test_invalid_pragma
     with_request({ "xmlrpc" => "2.0", "method" => "method_one_params_echo", "params" => "invalid", "id" => 1 })
-    assert_equal({ jsonrpc: "2.0", id: 1, error: { code: -32600, message: "Invalid request" } }, @response)
+    assert_equal({ jsonrpc: "2.0", id: 1, error: { code: -32_600, message: "Invalid request" } }, @response)
   end
 
   def test_invalid_pragma_version
     with_request({ "jsonrpc" => "4.2", "method" => "method_one_params_echo", "params" => "invalid", "id" => 1 })
-    assert_equal({ jsonrpc: "2.0", id: 1, error: { code: -32600, message: "Invalid request" } }, @response)
+    assert_equal({ jsonrpc: "2.0", id: 1, error: { code: -32_600, message: "Invalid request" } }, @response)
   end
 
   def test_invalid_params_type_string
     with_request({ "jsonrpc" => "2.0", "method" => "method_one_params_echo", "params" => "invalid", "id" => 1 })
-    assert_equal({ jsonrpc: "2.0", id: 1, error: { code: -32602, message: "Invalid params" } }, @response)
+    assert_equal({ jsonrpc: "2.0", id: 1, error: { code: -32_602, message: "Invalid params" } }, @response)
   end
-  
+
   def test_invalid_params_type_number
     with_request({ "jsonrpc" => "2.0", "method" => "method_one_params_echo", "params" => 42, "id" => 1 })
-    assert_equal({ jsonrpc: "2.0", id: 1, error: { code: -32602, message: "Invalid params" } }, @response)
+    assert_equal({ jsonrpc: "2.0", id: 1, error: { code: -32_602, message: "Invalid params" } }, @response)
   end
-  
 end
