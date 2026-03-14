@@ -8,6 +8,38 @@
 
 A Ruby implementation of [JSON-RPC 2.0](https://www.jsonrpc.org/specification) designed for simplicity and compliance with the specification.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Basic Usage](#basic-usage)
+  - [Batch Requests](#batch-requests)
+  - [Notifications](#notifications)
+- [Error Handling](#error-handling)
+- [Configuration](#configuration)
+  - [Error Callback](#error-callback)
+  - [Per-Call Configuration](#per-call-configuration)
+- [Advanced Features](#advanced-features)
+  - [Parallel Processing](#parallel-processing)
+  - [Building JSON-RPC Requests](#building-json-rpc-requests)
+- [Roadmap](#roadmap)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Installation
+
+Add to your Gemfile:
+
+```ruby
+gem "clamo"
+```
+
+Or install directly:
+
+```
+gem install clamo
+```
 
 ## Usage
 
@@ -60,17 +92,7 @@ response = Clamo::Server.dispatch(
 
 The longer names `parsed_dispatch_to_object`, `unparsed_dispatch_to_object`, and `handle` still work as deprecated aliases.
 
-### Handling Different Parameter Types
-
-Clamo supports both positional (array) and named (object/hash) parameters:
-
-```ruby
-# Positional parameters
-request = '{"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1}'
-
-# Named parameters
-request = '{"jsonrpc": "2.0", "method": "subtract", "params": {"a": 5, "b": 3}, "id": 2}'
-```
+Both positional (`[1, 2]`) and named (`{"a": 5, "b": 3}`) parameters are supported — they map to positional and keyword arguments on the Ruby method respectively.
 
 ### Batch Requests
 
@@ -106,21 +128,6 @@ response = Clamo::Server.dispatch_json(
 
 puts response
 # => nil
-```
-
-### Building JSON-RPC Requests
-
-Clamo provides utilities for building JSON-RPC requests:
-
-```ruby
-request = Clamo::JSONRPC.build_request(
-  method: "add",
-  params: [1, 2],
-  id: 1
-)
-
-puts request
-# => {"jsonrpc" => "2.0", "method" => "add", "params" => [1, 2], "id" => 1}
 ```
 
 ## Error Handling
@@ -178,8 +185,24 @@ Clamo::Server.dispatch(
 )
 ```
 
+### Building JSON-RPC Requests
+
+Clamo provides utilities for building JSON-RPC requests:
+
+```ruby
+request = Clamo::JSONRPC.build_request(
+  method: "add",
+  params: [1, 2],
+  id: 1
+)
+
+puts request
+# => {"jsonrpc" => "2.0", "method" => "add", "params" => [1, 2], "id" => 1}
+```
+
 ## Roadmap
 
+- [x] Per-call configuration
 - [ ] Method metadata caching
 - [ ] Method allowlists/denylists
 - [ ] Observability and logging
