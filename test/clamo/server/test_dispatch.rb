@@ -85,6 +85,11 @@ class TestServerDispatch < Minitest::Test
                  dispatch(jsonrpc_request(method: "method_one_params_object_echo", params: [{}], id: 1))
   end
 
+  def test_false_result
+    assert_equal expected_result(id: 1, result: false),
+                 dispatch(jsonrpc_request(method: "method_returns_false", id: 1))
+  end
+
   def test_explicit_null_id_returns_response
     assert_equal expected_result(id: nil, result: 42),
                  dispatch(jsonrpc_request(method: "method_no_params_number", id: nil))

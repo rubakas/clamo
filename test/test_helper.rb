@@ -67,6 +67,22 @@ module TestFixtures
         raise "something went wrong"
       end
 
+      def method_returns_false
+        false
+      end
+
+      def method_splat_args(*args)
+        args
+      end
+
+      def method_splat_kwargs(**kwargs)
+        kwargs
+      end
+
+      def method_mixed(pos, key:)
+        [pos, key]
+      end
+
       def method_slow(duration = 2)
         sleep(duration)
         "done"

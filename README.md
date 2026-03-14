@@ -128,6 +128,7 @@ Clamo follows the JSON-RPC 2.0 specification for error handling:
 | -32601     | Method not found | The method does not exist / is not available         |
 | -32602     | Invalid params   | Invalid method parameter(s) or arity mismatch        |
 | -32603     | Internal error   | Internal JSON-RPC error                              |
+| -32000     | Server error     | Exception raised by dispatched method                |
 
 Parameter arity is validated before dispatch. If the number of positional arguments or keyword arguments doesn't match the Ruby method signature, a `-32602 Invalid params` error is returned.
 

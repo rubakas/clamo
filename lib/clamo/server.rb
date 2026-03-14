@@ -173,7 +173,7 @@ module Clamo
         JSONRPC.build_result_response(id: request["id"], result: result)
       rescue StandardError => e
         config.on_error&.call(e, method, params)
-        JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INTERNAL_ERROR)
+        JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::SERVER_ERROR)
       end
 
       def params_match_arity?(object:, method:, params:)

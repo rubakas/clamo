@@ -64,13 +64,13 @@ class TestServerValidation < Minitest::Test
     assert_nil dispatch(jsonrpc_request(method: "secret_method"))
   end
 
-  def test_method_that_raises_returns_internal_error
+  def test_method_that_raises_returns_server_error
     response = dispatch(jsonrpc_request(method: "method_that_raises", id: 1))
 
     assert_equal "2.0", response["jsonrpc"]
     assert_equal 1, response["id"]
-    assert_equal(-32_603, response["error"]["code"])
-    assert_equal "Internal error", response["error"]["message"]
+    assert_equal(-32_000, response["error"]["code"])
+    assert_equal "Server error", response["error"]["message"]
     refute response["error"].key?("data")
   end
 

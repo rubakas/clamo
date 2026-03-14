@@ -14,22 +14,6 @@ module Clamo
     end
 
     class << self
-      def proper_params_if_any?(request)
-        if key_indifferent?(request, "params")
-          params = fetch_indifferent(request, "params")
-          params.is_a?(Array) || params.is_a?(Hash)
-        else
-          true
-        end
-      end
-
-      def valid_request?(request)
-        request.is_a?(Hash) &&
-          proper_pragma?(request) &&
-          proper_method?(request) &&
-          proper_id_if_any?(request)
-      end
-
       def build_request(**opts)
         raise ArgumentError, "method is required" unless opts.key?(:method)
 
@@ -75,6 +59,24 @@ module Clamo
             message: ProtocolErrors::PARSE_ERROR.message
           }
         )
+      end
+
+      # Used internally by Clamo::Server — not part of the public API.
+      def proper_params_if_any?(request)
+        if key_indifferent?(request, "params")
+          params = fetch_indifferent(request, "params")
+          params.is_a?(Array) || params.is_a?(Hash)
+        else
+          true
+        end
+      end
+
+      # Used internally by Clamo::Server — not part of the public API.
+      def valid_request?(request)
+        request.is_a?(Hash) &&
+          proper_pragma?(request) &&
+          proper_method?(request) &&
+          proper_id_if_any?(request)
       end
 
       private
