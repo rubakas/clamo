@@ -13,7 +13,7 @@ module Clamo
       #
       #   Clamo::Server.on_error = ->(e, method, params) { Rails.logger.error(e) }
       #
-      attr_accessor :on_error
+      attr_accessor :on_error, :before_dispatch, :after_dispatch
 
       # Maximum seconds allowed for a single method dispatch. Defaults to 30.
       # Set to nil to disable.
@@ -149,19 +149,32 @@ module Clamo
       end
 
       def dispatch_notification(request, block)
-        with_timeout { block.yield request["method"], request["params"] }
+        method = request["method"]
+        params = request["params"]
+        before_dispatch&.call(method, params)
+        with_timeout { block.yield(method, params) }
+        after_dispatch&.call(method, params, nil)
         nil
       rescue StandardError => e
-        on_error&.call(e, request["method"], request["params"])
+        on_error&.call(e, method, params)
         nil
       end
 
       def dispatch_request(request, block)
-        JSONRPC.build_result_response(
-          id: request["id"],
-          result: with_timeout { block.yield(request["method"], request["params"]) }
-        )
+        method = request["method"]
+        params = request["params"]
+        before_dispatch&.call(method, params)
+        result = with_timeout { block.yield(method, params) }
+        after_dispatch&.call(method, params, result)
+        JSONRPC.build_result_response(id: request["id"], result: result)
       rescue Timeout::Error
+        timeout_error(request)
+      rescue StandardError => e
+        on_error&.call(e, method, params)
+        JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INTERNAL_ERROR)
+      end
+
+      def timeout_error(request)
         JSONRPC.build_error_response(
           id: request["id"],
           error: {
@@ -169,12 +182,6 @@ module Clamo
             message: JSONRPC::ProtocolErrors::SERVER_ERROR.message,
             data: "Request timed out"
           }
-        )
-      rescue StandardError => e
-        on_error&.call(e, request["method"], request["params"])
-        JSONRPC.build_error_response_from(
-          id: request["id"],
-          descriptor: JSONRPC::ProtocolErrors::INTERNAL_ERROR
         )
       end
 

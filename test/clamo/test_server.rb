@@ -396,6 +396,94 @@ class TestServerNotificationExecution < Minitest::Test
   end
 end
 
+class TestServerBeforeDispatch < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def teardown
+    Clamo::Server.before_dispatch = nil
+  end
+
+  def test_called_with_method_and_params
+    captured = []
+    Clamo::Server.before_dispatch = ->(method, params) { captured << { method: method, params: params } }
+
+    dispatch(jsonrpc_request(method: "method_two_params_add", params: [1, 2], id: 1))
+
+    assert_equal 1, captured.size
+    assert_equal "method_two_params_add", captured[0][:method]
+    assert_equal [1, 2], captured[0][:params]
+  end
+
+  def test_raising_halts_dispatch_and_returns_error
+    Clamo::Server.before_dispatch = ->(_method, _params) { raise "unauthorized" }
+
+    response = dispatch(jsonrpc_request(method: "method_no_params_number", id: 1))
+
+    assert_equal(-32_603, response[:error][:code])
+  end
+
+  def test_raising_halts_notification
+    TestFixtures::ExampleService.reset_test_state!
+    Clamo::Server.before_dispatch = ->(_method, _params) { raise "blocked" }
+
+    dispatch(jsonrpc_request(method: "method_recording"))
+
+    assert_nil TestFixtures::ExampleService.last_recording
+  end
+
+  def test_called_for_notifications
+    captured = []
+    Clamo::Server.before_dispatch = ->(method, _params) { captured << method }
+
+    dispatch(jsonrpc_request(method: "method_no_params_number"))
+
+    assert_equal ["method_no_params_number"], captured
+  end
+end
+
+class TestServerAfterDispatch < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def teardown
+    Clamo::Server.after_dispatch = nil
+  end
+
+  def test_called_with_method_params_and_result
+    captured = []
+    Clamo::Server.after_dispatch = lambda { |method, params, result|
+      captured << { method: method, params: params, result: result }
+    }
+
+    dispatch(jsonrpc_request(method: "method_two_params_add", params: [1, 2], id: 1))
+
+    assert_equal 1, captured.size
+    assert_equal "method_two_params_add", captured[0][:method]
+    assert_equal [1, 2], captured[0][:params]
+    assert_equal 3, captured[0][:result]
+  end
+
+  def test_not_called_on_error
+    captured = []
+    Clamo::Server.after_dispatch = ->(method, _params, _result) { captured << method }
+
+    dispatch(jsonrpc_request(method: "method_that_raises", id: 1))
+
+    assert_empty captured
+  end
+
+  def test_called_for_notifications_with_nil_result
+    captured = []
+    Clamo::Server.after_dispatch = lambda { |method, _params, result|
+      captured << { method: method, result: result }
+    }
+
+    dispatch(jsonrpc_request(method: "method_no_params_number"))
+
+    assert_equal 1, captured.size
+    assert_nil captured[0][:result]
+  end
+end
+
 class TestServerArgumentValidation < Minitest::Test
   def test_nil_object_raises_argument_error
     assert_raises(ArgumentError) do

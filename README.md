@@ -149,6 +149,20 @@ Clamo::Server.on_error = ->(exception, method, params) {
 }
 ```
 
+### Dispatch Hooks
+
+`before_dispatch` and `after_dispatch` run around every method call (requests and notifications). Raise in `before_dispatch` to halt execution:
+
+```ruby
+Clamo::Server.before_dispatch = ->(method, params) {
+  raise "unauthorized" unless allowed?(method)
+}
+
+Clamo::Server.after_dispatch = ->(method, params, result) {
+  Rails.logger.info("#{method} completed")
+}
+```
+
 ## Advanced Features
 
 ### Parallel Processing
