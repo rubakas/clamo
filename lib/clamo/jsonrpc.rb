@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 module Clamo
+  # Utilities for building and validating JSON-RPC 2.0 messages.
   module JSONRPC
+    # Standard JSON-RPC 2.0 error codes and messages.
     module ProtocolErrors
+      # Immutable descriptor pairing an error code with its message.
       ErrorDescriptor = Data.define(:code, :message)
 
       PARSE_ERROR       = ErrorDescriptor.new(code: -32_700, message: "Parse error")
@@ -14,6 +17,13 @@ module Clamo
     end
 
     class << self
+      # Builds a JSON-RPC 2.0 request Hash.
+      #
+      #   Clamo::JSONRPC.build_request(method: "add", params: [1, 2], id: 1)
+      #   # => {"jsonrpc"=>"2.0", "method"=>"add", "params"=>[1, 2], "id"=>1}
+      #
+      # +method+ is required. +params+ (Array or Hash) and +id+ are optional.
+      # Omitting +id+ produces a notification.
       def build_request(**opts)
         raise ArgumentError, "method is required" unless opts.key?(:method)
 
@@ -24,10 +34,13 @@ module Clamo
           .then { |r| opts.key?(:id) ? r.merge("id" => opts[:id]) : r }
       end
 
+      # Builds a successful JSON-RPC 2.0 response Hash.
       def build_result_response(id:, result:)
         { "jsonrpc" => "2.0", "result" => result, "id" => id }
       end
 
+      # Builds a JSON-RPC 2.0 error response Hash.
+      # Requires +error:+ with +:code+ and +:message+ keys. +:data+ is optional.
       def build_error_response(**opts)
         raise ArgumentError, "error code is required" unless opts.dig(:error, :code)
         raise ArgumentError, "error message is required" unless opts.dig(:error, :message)
@@ -41,6 +54,7 @@ module Clamo
           }.reject { |k, _| k == "data" && !opts[:error].key?(:data) } }
       end
 
+      # Builds a JSON-RPC 2.0 error response from an ErrorDescriptor.
       def build_error_response_from(descriptor:, id: nil)
         build_error_response(
           id: id,
@@ -51,6 +65,7 @@ module Clamo
         )
       end
 
+      # Convenience method for a parse error (-32700) response.
       def build_error_response_parse_error
         build_error_response(
           id: nil,

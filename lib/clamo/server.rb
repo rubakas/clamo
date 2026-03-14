@@ -3,16 +3,35 @@
 require "json"
 
 module Clamo
+  # JSON-RPC 2.0 request dispatcher. All public methods on the target +object+
+  # become callable JSON-RPC methods.
+  #
+  # Three entry points, from highest to lowest level:
+  # - handle_json — JSON string in, JSON string out
+  # - dispatch_json — JSON string in, parsed Hash out
+  # - dispatch — parsed Hash in, parsed Hash out
+  #
+  # == Example
+  #
+  #   Clamo::Server.handle_json(
+  #     request: '{"jsonrpc":"2.0","method":"add","params":[1,2],"id":1}',
+  #     object:  MyService
+  #   )
+  #   # => '{"jsonrpc":"2.0","result":3,"id":1}'
   module Server
     Config = Data.define(:on_error)
 
     class << self
+      # Global error callback. Called with +(exception, method, params)+ whenever
+      # a dispatched method raises. Fires for both requests and notifications.
       attr_accessor :on_error
 
-      # JSON string in, JSON string out. Full round-trip for HTTP/socket integrations.
+      # JSON string in, JSON string out. The primary entry point for HTTP/socket
+      # integrations. Returns +nil+ for notifications (no response expected).
       #
       #   Clamo::Server.handle_json(request: body, object: MyService)
       #
+      # All extra keyword arguments are forwarded to #dispatch.
       def handle_json(request:, object:, **)
         response = dispatch_json(request: request, object: object, **)
         response&.to_json
@@ -20,10 +39,13 @@ module Clamo
 
       alias handle handle_json
 
-      # JSON string in, parsed response out.
+      # JSON string in, parsed response Hash out. Parses the JSON and delegates
+      # to #dispatch. Returns a Hash (or Array of Hashes for batches), or +nil+
+      # for notifications.
       #
-      #   Clamo::Server.dispatch_json(request: json_string, object: MyModule)
+      #   Clamo::Server.dispatch_json(request: json_string, object: MyService)
       #
+      # All extra keyword arguments are forwarded to #dispatch.
       def dispatch_json(request:, object:, **)
         raise ArgumentError, "object is required" unless object
 
@@ -38,10 +60,15 @@ module Clamo
 
       alias unparsed_dispatch_to_object dispatch_json
 
-      # Parsed hash in, parsed response out.
+      # Parsed Hash (or Array) in, parsed response Hash out. Validates the
+      # request, resolves the method on +object+, checks parameter arity,
+      # and dispatches. Returns +nil+ for notifications.
       #
-      #   Clamo::Server.dispatch(request: hash_or_array, object: MyModule)
+      #   Clamo::Server.dispatch(request: hash_or_array, object: MyService)
       #
+      # ==== Options
+      # +on_error+:: Error callback for this call, overrides the global on_error.
+      # Extra keyword arguments are forwarded to +Parallel.map+ for batch requests.
       def dispatch(request:, object:,
                    on_error: self.on_error,
                    **opts)
