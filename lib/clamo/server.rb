@@ -6,7 +6,8 @@ require "parallel"
 module Clamo
   module Server
     class << self
-      # Optional callback for notification errors.
+      # Global error callback for notification failures.
+      # This is module-level state shared across all callers.
       # Set to any callable (lambda, method, proc) that accepts (exception, method, params).
       #
       #   Clamo::Server.on_error = ->(e, method, params) { Rails.logger.error(e) }
@@ -44,6 +45,8 @@ module Clamo
         end
       end
 
+      private
+
       def method_known?(object:, method:)
         object.public_methods(false).map(&:to_sym).include?(method.to_sym)
       end
@@ -67,8 +70,6 @@ module Clamo
           JSONRPC.build_error_response_from(id: nil, descriptor: JSONRPC::ProtocolErrors::INVALID_REQUEST)
         end
       end
-
-      private
 
       def response_for_single_request(request:, object:, block:)
         error = validate_request_structure(request)
@@ -102,7 +103,7 @@ module Clamo
           )
         end
 
-        return if JSONRPC.valid_params?(request)
+        return if JSONRPC.proper_params_if_any?(request)
 
         JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INVALID_PARAMS)
       end
@@ -112,11 +113,10 @@ module Clamo
       end
 
       def dispatch_notification(request, block)
-        Thread.new do
-          block.yield request["method"], request["params"]
-        rescue StandardError => e
-          on_error&.call(e, request["method"], request["params"])
-        end
+        block.yield request["method"], request["params"]
+        nil
+      rescue StandardError => e
+        on_error&.call(e, request["method"], request["params"])
         nil
       end
 

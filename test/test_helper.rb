@@ -45,6 +45,20 @@ module TestFixtures
         named
       end
 
+      def method_two_params_add(left, right)
+        left + right
+      end
+
+      def method_recording(value = "called")
+        @last_recording = value
+      end
+
+      attr_reader :last_recording
+
+      def reset_test_state!
+        @last_recording = nil
+      end
+
       def method_that_raises
         raise "something went wrong"
       end

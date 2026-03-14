@@ -2,11 +2,8 @@
 
 module Clamo
   module JSONRPC
-    PROTOCOL_VERSION_PRAGMA = { jsonrpc: "2.0" }.freeze
-
     module ProtocolErrors
       ErrorDescriptor = Data.define(:code, :message)
-      SERVER_ERROR_CODE_RANGE = ((-32_099)..(-32_000))
 
       PARSE_ERROR       = ErrorDescriptor.new(code: -32_700, message: "Parse error")
       INVALID_REQUEST   = ErrorDescriptor.new(code: -32_600, message: "Invalid request")
@@ -50,10 +47,6 @@ module Clamo
           proper_id_if_any?(request)
       end
 
-      def valid_params?(request)
-        proper_params_if_any?(request)
-      end
-
       def build_request(**opts)
         raise ArgumentError, "method is required" unless opts.key?(:method)
 
@@ -81,24 +74,24 @@ module Clamo
           }.reject { |k, _| k == :data && !opts[:error].key?(:data) } }
       end
 
-      def build_error_response_from(**opts)
-        raise ArgumentError, "descriptor is required" unless opts[:descriptor]
-
-        opts.merge(
-          { error:
-            { code: opts[:descriptor].code,
-              message: opts[:descriptor].message } }
+      def build_error_response_from(descriptor:, id: nil)
+        build_error_response(
+          id: id,
+          error: {
+            code: descriptor.code,
+            message: descriptor.message
+          }
         )
-            .then { |hash| build_error_response(**hash) }
       end
 
-      def build_error_response_parse_error(**opts)
-        opts.merge(
-          { error:
-            { code: ProtocolErrors::PARSE_ERROR.code,
-              message: ProtocolErrors::PARSE_ERROR.message } }
+      def build_error_response_parse_error
+        build_error_response(
+          id: nil,
+          error: {
+            code: ProtocolErrors::PARSE_ERROR.code,
+            message: ProtocolErrors::PARSE_ERROR.message
+          }
         )
-            .then { |hash| build_error_response(**hash) }
       end
 
       private

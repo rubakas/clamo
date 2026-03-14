@@ -110,6 +110,11 @@ class TestServerDispatch < Minitest::Test
     assert_equal expected_result(id: 1, result: "value"), dispatch(request)
   end
 
+  def test_two_positional_params
+    assert_equal expected_result(id: 1, result: 3),
+                 dispatch(jsonrpc_request(method: "method_two_params_add", params: [1, 2], id: 1))
+  end
+
   def test_result_wrapped_in_array
     assert_equal expected_result(id: 1, result: [nil]),
                  dispatch(jsonrpc_request(method: "method_one_params_array_echo", params: [nil], id: 1))
@@ -263,7 +268,6 @@ class TestServerOnError < Minitest::Test
 
   def test_notification_error_calls_on_error
     dispatch(jsonrpc_request(method: "method_that_raises"))
-    sleep 0.1 # allow thread to execute
 
     assert_equal 1, @captured_errors.size
     assert_equal "method_that_raises", @captured_errors[0][:method]
@@ -273,6 +277,47 @@ class TestServerOnError < Minitest::Test
   def test_notification_error_without_callback_does_not_raise
     Clamo::Server.on_error = nil
     assert_nil dispatch(jsonrpc_request(method: "method_that_raises"))
-    sleep 0.1 # allow thread to finish without blowing up
+  end
+end
+
+class TestServerNotificationExecution < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def setup
+    TestFixtures::ExampleService.reset_test_state!
+  end
+
+  def test_notification_executes_method
+    result = dispatch(jsonrpc_request(method: "method_recording"))
+    assert_nil result
+    assert_equal "called", TestFixtures::ExampleService.last_recording
+  end
+
+  def test_notification_with_params_executes_method
+    result = dispatch(jsonrpc_request(method: "method_recording", params: ["custom_value"]))
+    assert_nil result
+    assert_equal "custom_value", TestFixtures::ExampleService.last_recording
+  end
+end
+
+class TestServerArgumentValidation < Minitest::Test
+  def test_nil_object_raises_argument_error
+    assert_raises(ArgumentError) do
+      Clamo::Server.unparsed_dispatch_to_object(
+        request: '{"jsonrpc": "2.0", "method": "test", "id": 1}',
+        object: nil
+      )
+    end
+  end
+
+  def test_unsupported_params_type_raises
+    assert_raises(ArgumentError) do
+      Clamo::Server.send(
+        :dispatch_to_ruby,
+        object: TestFixtures::ExampleService,
+        method: "method_no_params_nil",
+        params: 42
+      )
+    end
   end
 end

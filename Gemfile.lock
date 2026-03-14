@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     clamo (0.5.0)
-      parallel (~> 1.27.0)
+      parallel (~> 1.27)
 
 GEM
   remote: https://rubygems.org/
