@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.0] - 2026-03-14
+
+### Changed
+
+- Extracted `error_for` helper to centralize notification-aware error responses, replacing scattered `request.key?("id") ? error : nil` pattern.
+- Split `validate_request_structure` into envelope validation and `validate_params_type`, making the single-request pipeline a clear 5-stage chain.
+- Removed `method_not_found_error` and `arity_mismatch_error` one-liner wrappers (replaced by `error_for` calls).
+
+### Added
+
+- `server_error_response` test helper, completing the error response helper set.
+- Test for arity-mismatch notification returning nil.
+
 ## [0.11.0] - 2026-03-14
 
 ### Changed

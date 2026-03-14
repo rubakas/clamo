@@ -103,12 +103,15 @@ module Clamo
         error = validate_request_structure(request)
         return error if error
 
+        error = validate_params_type(request)
+        return error if error
+
         unless method_known?(object: object, method: request["method"])
-          return request.key?("id") ? method_not_found_error(request) : nil
+          return error_for(request, JSONRPC::ProtocolErrors::METHOD_NOT_FOUND)
         end
 
         unless params_match_arity?(object: object, method: request["method"], params: request["params"])
-          return request.key?("id") ? arity_mismatch_error(request) : nil
+          return error_for(request, JSONRPC::ProtocolErrors::INVALID_PARAMS)
         end
 
         return dispatch_notification(request, block, config) unless request.key?("id")
@@ -139,28 +142,25 @@ module Clamo
         items.map(&)
       end
 
-      def validate_request_structure(request)
-        unless JSONRPC.valid_request?(request)
-          return JSONRPC.build_error_response_from(
-            id: request.is_a?(Hash) ? request["id"] : nil,
-            descriptor: JSONRPC::ProtocolErrors::INVALID_REQUEST
-          )
-        end
+      def error_for(request, descriptor)
+        return unless request.key?("id")
 
+        JSONRPC.build_error_response_from(id: request["id"], descriptor: descriptor)
+      end
+
+      def validate_request_structure(request)
+        return if JSONRPC.valid_request?(request)
+
+        JSONRPC.build_error_response_from(
+          id: request.is_a?(Hash) ? request["id"] : nil,
+          descriptor: JSONRPC::ProtocolErrors::INVALID_REQUEST
+        )
+      end
+
+      def validate_params_type(request)
         return if JSONRPC.proper_params_if_any?(request)
 
-        # Notifications must never produce a response, even for invalid params
-        return nil unless request.key?("id")
-
-        JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INVALID_PARAMS)
-      end
-
-      def method_not_found_error(request)
-        JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::METHOD_NOT_FOUND)
-      end
-
-      def arity_mismatch_error(request)
-        JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INVALID_PARAMS)
+        error_for(request, JSONRPC::ProtocolErrors::INVALID_PARAMS)
       end
 
       def dispatch_notification(request, block, config)

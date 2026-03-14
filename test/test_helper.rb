@@ -152,4 +152,8 @@ module JSONRPCTestHelpers
   def invalid_params_response(id:)
     expected_error(id: id, descriptor: Clamo::JSONRPC::ProtocolErrors::INVALID_PARAMS)
   end
+
+  def server_error_response(id:)
+    expected_error(id: id, descriptor: Clamo::JSONRPC::ProtocolErrors::SERVER_ERROR)
+  end
 end

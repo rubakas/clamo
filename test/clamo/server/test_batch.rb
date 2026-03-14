@@ -78,8 +78,7 @@ class TestServerBatchMixedErrors < Minitest::Test
 
     assert_equal 2, response.size
     assert_equal expected_result(id: 1, result: 42), response[0]
-    assert_equal(-32_000, response[1]["error"]["code"])
-    assert_equal "Server error", response[1]["error"]["message"]
+    assert_equal server_error_response(id: 2), response[1]
   end
 
   def test_batch_with_success_and_invalid_params

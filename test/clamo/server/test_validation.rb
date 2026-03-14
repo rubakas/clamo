@@ -67,11 +67,7 @@ class TestServerValidation < Minitest::Test
   def test_method_that_raises_returns_server_error
     response = dispatch(jsonrpc_request(method: "method_that_raises", id: 1))
 
-    assert_equal "2.0", response["jsonrpc"]
-    assert_equal 1, response["id"]
-    assert_equal(-32_000, response["error"]["code"])
-    assert_equal "Server error", response["error"]["message"]
-    refute response["error"].key?("data")
+    assert_equal server_error_response(id: 1), response
   end
 
   def test_method_that_raises_calls_on_error
@@ -97,6 +93,10 @@ class TestServerValidation < Minitest::Test
     response = dispatch(jsonrpc_request(method: "method_two_params_add", params: [1], id: 1))
 
     assert_equal(-32_602, response["error"]["code"])
+  end
+
+  def test_arity_mismatch_notification_returns_nil
+    assert_nil dispatch(jsonrpc_request(method: "method_two_params_add", params: [1]))
   end
 end
 

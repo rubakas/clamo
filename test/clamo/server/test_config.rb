@@ -41,7 +41,7 @@ class TestServerPerCallConfig < Minitest::Test
       on_error: ->(e, method, _params) { captured << { error: e, method: method } }
     )
 
-    assert_equal(-32_000, response["error"]["code"])
+    assert_equal server_error_response(id: 1), response
     assert_equal 1, captured.size
     assert_equal "something went wrong", captured[0][:error].message
   end
