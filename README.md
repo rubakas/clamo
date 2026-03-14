@@ -1,5 +1,11 @@
 # Clamo
 
+[![CI](https://github.com/rubakas/clamo/actions/workflows/main.yml/badge.svg)](https://github.com/rubakas/clamo/actions/workflows/main.yml)
+[![Gem Version](https://badge.fury.io/rb/clamo.svg)](https://badge.fury.io/rb/clamo)
+[![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.3-ruby.svg)](https://www.ruby-lang.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![JSON-RPC 2.0](https://img.shields.io/badge/JSON--RPC-2.0-orange.svg)](https://www.jsonrpc.org/specification)
+
 A Ruby implementation of [JSON-RPC 2.0](https://www.jsonrpc.org/specification) designed for simplicity and compliance with the specification.
 
 
