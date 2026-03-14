@@ -181,6 +181,7 @@ Clamo::Server.dispatch(
 - [ ] Hooks
 - [ ] Rack helpers and framework helpers (Rails)
 - [ ] Autodoc (Markdown?)
+- [ ] Error data builder
 - [ ] Schemas
 
 ## Development
