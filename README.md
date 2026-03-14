@@ -1,26 +1,5 @@
 # Clamo
 
-JSON-RPC protocol toolkit for Ruby.
-
-Consume, Serve or test JSON-RPC endpoints with Clamo.
-
-## Installation
-
-Install the gem and add to the application's Gemfile by executing:
-
-    $ bundle add clamo
-
-If bundler is not being used to manage dependencies, install the gem by executing:
-
-    $ gem install clamo
-
-
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machi# Clamo
-
 A Ruby implementation of [JSON-RPC 2.0](https://www.jsonrpc.org/specification) designed for simplicity and compliance with the specification.
 
 
@@ -36,11 +15,11 @@ module MyService
   def self.add(a, b)
     a + b
   end
-  
+
   def self.subtract(a:, b:)
     a - b
   end
-  
+
   # Private methods won't be accessible via JSON-RPC
   private_class_method def self.internal_method
     # This won't be exposed
@@ -55,7 +34,7 @@ response = Clamo::Server.unparsed_dispatch_to_object(
 )
 
 puts response
-# => {"jsonrpc":"2.0","result":3,"id":1}
+# => {jsonrpc: "2.0", result: 3, id: 1}
 ```
 
 ### Handling Different Parameter Types
@@ -88,7 +67,7 @@ batch_response = Clamo::Server.unparsed_dispatch_to_object(
 )
 
 puts batch_response
-# => [{"jsonrpc":"2.0","result":3,"id":1},{"jsonrpc":"2.0","result":2,"id":2}]
+# => [{jsonrpc: "2.0", result: 3, id: 1}, {jsonrpc: "2.0", result: 2, id: 2}]
 ```
 
 ### Notifications
@@ -118,7 +97,7 @@ request = Clamo::JSONRPC.build_request(
 )
 
 puts request
-# => {:jsonrpc=>"2.0", :method=>"add", :params=>[1, 2], :id=>1}
+# => {jsonrpc: "2.0", method: "add", params: [1, 2], id: 1}
 ```
 
 ## Error Handling
@@ -160,8 +139,4 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/rubaka
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).ne, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/rubakas/clamo
+The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).

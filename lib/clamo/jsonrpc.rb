@@ -54,13 +54,14 @@ module Clamo
         proper_params_if_any?(request)
       end
 
-      def build_request **opts
-        # raise if no method present
-        # raise if params present, but not an array
-        { jsonrpc: "2.0",
-          method: opts[:method] }
-          .merge({ params: opts[:params] })
-          .merge(opts.key?(:id) ? { id: opts[:id] } : {})
+      def build_request(**opts)
+        raise ArgumentError, "method is required" unless opts.key?(:method)
+
+        validate_params_type!(opts[:params]) if opts.key?(:params)
+
+        { jsonrpc: "2.0", method: opts[:method] }
+          .then { |r| opts.key?(:params) ? r.merge(params: opts[:params]) : r }
+          .then { |r| opts.key?(:id) ? r.merge(id: opts[:id]) : r }
       end
 
       def build_result_response(id:, result:)
@@ -69,9 +70,10 @@ module Clamo
           .merge({ id: id })
       end
 
-      def build_error_response **opts
-        # raise if no error code present
-        # raise if no error message present
+      def build_error_response(**opts)
+        raise ArgumentError, "error code is required" unless opts.dig(:error, :code)
+        raise ArgumentError, "error message is required" unless opts.dig(:error, :message)
+
         { jsonrpc: "2.0",
           id: opts[:id],
           error: {
@@ -81,8 +83,9 @@ module Clamo
           }.reject { |k, _| k == :data && !opts[:error].key?(:data) } }
       end
 
-      def build_error_response_from **opts
-        # raise unless opts[:descriptor]
+      def build_error_response_from(**opts)
+        raise ArgumentError, "descriptor is required" unless opts[:descriptor]
+
         opts.merge(
           { error:
             { code: opts[:descriptor].code,
@@ -91,13 +94,21 @@ module Clamo
             .then { |hash| build_error_response(**hash) }
       end
 
-      def build_error_response_parse_error **opts
+      def build_error_response_parse_error(**opts)
         opts.merge(
           { error:
             { code: ProtocolErrors::PARSE_ERROR.code,
               message: ProtocolErrors::PARSE_ERROR.message } }
         )
             .then { |hash| build_error_response(**hash) }
+      end
+
+      private
+
+      def validate_params_type!(params)
+        return if params.is_a?(Array) || params.is_a?(Hash)
+
+        raise ArgumentError, "params must be an Array or Hash"
       end
     end
   end

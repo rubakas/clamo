@@ -7,7 +7,7 @@ class TestClamo < Minitest::Test
     refute_nil ::Clamo::VERSION
   end
 
-  def test_it_does_something_useful
-    assert true
+  def test_error_class_exists
+    assert_equal Clamo::Error.superclass, StandardError
   end
 end
