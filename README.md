@@ -214,6 +214,10 @@ puts request
 - [ ] Autodoc (Markdown?)
 - [ ] Error data builder
 - [ ] Schemas
+- [ ] Method auto-prefixing (namespace to prefix)
+- [ ] Multiple objects (namespace fusion)
+- [ ] Context injection
+- [ ] More examples
 
 ## Development
 
