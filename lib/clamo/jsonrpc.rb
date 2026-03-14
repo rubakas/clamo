@@ -15,26 +15,26 @@ module Clamo
 
     class << self
       def proper_pragma?(request)
-        request["jsonrpc"] == "2.0"
+        fetch_indifferent(request, "jsonrpc") == "2.0"
       end
 
       def proper_method?(request)
-        request["method"].is_a?(String)
+        fetch_indifferent(request, "method").is_a?(String)
       end
 
       def proper_id_if_any?(request)
-        if request.key?("id")
-          request["id"].is_a?(String) ||
-            request["id"].is_a?(Integer) ||
-            request["id"].is_a?(NilClass)
+        if key_indifferent?(request, "id")
+          id = fetch_indifferent(request, "id")
+          id.is_a?(String) || id.is_a?(Integer) || id.is_a?(NilClass)
         else
           true
         end
       end
 
       def proper_params_if_any?(request)
-        if request.key?("params")
-          request["params"].is_a?(Array) || request["params"].is_a?(Hash)
+        if key_indifferent?(request, "params")
+          params = fetch_indifferent(request, "params")
+          params.is_a?(Array) || params.is_a?(Hash)
         else
           true
         end
@@ -100,6 +100,14 @@ module Clamo
         return if params.is_a?(Array) || params.is_a?(Hash)
 
         raise ArgumentError, "params must be an Array or Hash"
+      end
+
+      def fetch_indifferent(hash, key)
+        hash.fetch(key.to_s) { hash.fetch(key.to_sym, nil) }
+      end
+
+      def key_indifferent?(hash, key)
+        hash.key?(key.to_s) || hash.key?(key.to_sym)
       end
     end
   end

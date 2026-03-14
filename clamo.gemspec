@@ -7,9 +7,11 @@ Gem::Specification.new do |spec|
   spec.version = Clamo::VERSION
   spec.authors = ["Andriy Tyurnikov"]
   spec.email = ["Andriy.Tyurnikov@gmail.com"]
+  spec.license = "MIT"
 
   spec.summary = "JSON-RPC 2.0 server toolkit for Ruby"
-  spec.description = "JSON-RPC 2.0 server toolkit for Ruby"
+  spec.description = "Minimal, spec-compliant JSON-RPC 2.0 server for Ruby with request validation, " \
+                     "method dispatch, batch processing, and notification support."
   spec.homepage = "https://github.com/rubakas/clamo"
   spec.required_ruby_version = ">= 3.3.0"
 

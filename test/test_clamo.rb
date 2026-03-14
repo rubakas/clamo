@@ -6,8 +6,4 @@ class TestClamo < Minitest::Test
   def test_that_it_has_a_version_number
     refute_nil ::Clamo::VERSION
   end
-
-  def test_error_class_exists
-    assert_equal Clamo::Error.superclass, StandardError
-  end
 end

@@ -40,6 +40,8 @@ module Clamo
       end
 
       def parsed_dispatch_to_object(request:, object:, **opts)
+        raise ArgumentError, "object is required" unless object
+
         response_for(request: request, object: object, **opts) do |method, params|
           dispatch_to_ruby(object: object, method: method, params: params)
         end
@@ -53,13 +55,15 @@ module Clamo
 
       def dispatch_to_ruby(object:, method:, params:)
         case params
-        when Array     then object.public_send(method.to_sym, *params)
-        when Hash      then object.public_send(method.to_sym, **params.transform_keys(&:to_sym))
-        when NilClass  then object.public_send(method.to_sym)
-        else raise ArgumentError, "Unsupported params type: #{params.class}"
+        when Array    then object.public_send(method.to_sym, *params)
+        when Hash     then object.public_send(method.to_sym, **params.transform_keys(&:to_sym))
+        when NilClass then object.public_send(method.to_sym)
         end
       end
 
+      # Extra keyword arguments (**) are forwarded to response_for_batch only,
+      # where they become options for Parallel.map (e.g., in_processes: 4).
+      # For single requests they are silently ignored.
       def response_for(request:, object:, **, &block)
         case request
         when Array
@@ -89,6 +93,11 @@ module Clamo
           return JSONRPC.build_error_response_from(id: nil, descriptor: JSONRPC::ProtocolErrors::INVALID_REQUEST)
         end
 
+        if request.size == 1
+          result = response_for_single_request(request: request.first, object: object, block: block)
+          return result ? [result] : nil
+        end
+
         result = Parallel.map(request, **opts) do |item|
           response_for_single_request(request: item, object: object, block: block)
         end.compact
@@ -104,6 +113,9 @@ module Clamo
         end
 
         return if JSONRPC.proper_params_if_any?(request)
+
+        # Notifications must never produce a response, even for invalid params
+        return nil unless request.key?("id")
 
         JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INVALID_PARAMS)
       end

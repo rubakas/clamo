@@ -45,6 +45,15 @@ class TestServerValidation < Minitest::Test
   def test_unknown_method_notification
     assert_nil dispatch(jsonrpc_request(method: "unknown_method"))
   end
+
+  def test_empty_string_method_returns_method_not_found
+    assert_equal method_not_found_response(id: 1),
+                 dispatch(jsonrpc_request(method: "", id: 1))
+  end
+
+  def test_notification_with_invalid_params_returns_nil
+    assert_nil dispatch(jsonrpc_request(method: "method_one_params_echo", params: "invalid"))
+  end
 end
 
 class TestServerDispatch < Minitest::Test
@@ -128,6 +137,11 @@ class TestServerDispatch < Minitest::Test
   def test_result_object_in_object
     assert_equal expected_result(id: 1, result: { value: {} }),
                  dispatch(jsonrpc_request(method: "method_one_params_object_echo", params: [{}], id: 1))
+  end
+
+  def test_explicit_null_id_returns_response
+    request = { "jsonrpc" => "2.0", "method" => "method_no_params_number", "id" => nil }
+    assert_equal expected_result(id: nil, result: 42), dispatch(request)
   end
 end
 
@@ -310,14 +324,20 @@ class TestServerArgumentValidation < Minitest::Test
     end
   end
 
-  def test_unsupported_params_type_raises
+  def test_nil_object_raises_argument_error_for_parsed_dispatch
     assert_raises(ArgumentError) do
-      Clamo::Server.send(
-        :dispatch_to_ruby,
-        object: TestFixtures::ExampleService,
-        method: "method_no_params_nil",
-        params: 42
+      Clamo::Server.parsed_dispatch_to_object(
+        request: { "jsonrpc" => "2.0", "method" => "test", "id" => 1 },
+        object: nil
       )
     end
+  end
+
+  def test_invalid_params_type_returns_invalid_params_error
+    response = Clamo::Server.parsed_dispatch_to_object(
+      request: { "jsonrpc" => "2.0", "method" => "method_one_params_echo", "params" => 42, "id" => 1 },
+      object: TestFixtures::ExampleService
+    )
+    assert_equal(-32_602, response[:error][:code])
   end
 end

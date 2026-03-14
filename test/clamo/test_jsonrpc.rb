@@ -32,6 +32,16 @@ class TestJSONRPCBuildRequest < Minitest::Test
   def test_raises_with_invalid_params_type
     assert_raises(ArgumentError) { Clamo::JSONRPC.build_request(method: "x", params: "invalid") }
   end
+
+  def test_build_request_output_is_valid
+    request = Clamo::JSONRPC.build_request(method: "test", id: 1)
+    assert Clamo::JSONRPC.valid_request?(request)
+  end
+
+  def test_build_request_notification_output_is_valid
+    request = Clamo::JSONRPC.build_request(method: "test")
+    assert Clamo::JSONRPC.valid_request?(request)
+  end
 end
 
 class TestJSONRPCBuildResultResponse < Minitest::Test
