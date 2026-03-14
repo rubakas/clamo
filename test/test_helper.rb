@@ -45,6 +45,10 @@ module TestFixtures
         named
       end
 
+      def method_required_keyword(name:)
+        name
+      end
+
       def method_two_params_add(left, right)
         left + right
       end

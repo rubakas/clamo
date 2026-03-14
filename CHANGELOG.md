@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.0] - 2026-03-14
+
+### Removed
+
+- **Breaking:** `timeout` configuration and `Timeout.timeout` wrapping — Ruby's `Timeout.timeout` is unsafe (can fire during `ensure`, IO, or lock acquisition). Callers who need timeouts should wrap dispatch externally.
+- **Breaking:** `before_dispatch` and `after_dispatch` hooks — callers can wrap `dispatch` calls directly for the same effect with less coupling.
+- `parallel` as a runtime dependency — it is now loaded on demand. Batch requests fall back to sequential `map` when the gem is not installed.
+
+### Added
+
+- **Arity validation** — parameter count and keyword names are checked against the Ruby method signature before dispatch. Mismatches return `-32602 Invalid params` instead of the previous `-32603 Internal error`.
+- `Clamo::Server.dispatch` — alias for `parsed_dispatch_to_object`.
+- `Clamo::Server.dispatch_json` — alias for `unparsed_dispatch_to_object`.
+- Concurrency tests for thread-safe dispatch.
+
+### Changed
+
+- `Config` simplified to `Data.define(:on_error)` (was `Data.define(:timeout, :on_error, :before_dispatch, :after_dispatch)`).
+- `parsed_dispatch_to_object` signature reduced to `(request:, object:, on_error:, **opts)`.
+
 ## [0.9.0] - 2026-03-14
 
 ### Changed

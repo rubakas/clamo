@@ -1,25 +1,13 @@
 # frozen_string_literal: true
 
 require "json"
-require "parallel"
-require "timeout"
 
 module Clamo
   module Server
-    Config = Data.define(:timeout, :on_error, :before_dispatch, :after_dispatch)
+    Config = Data.define(:on_error)
 
     class << self
-      # Module-level defaults. These are snapshotted at the start of each
-      # dispatch call, so mutations mid-request do not affect in-flight work.
-      # All four can be overridden per-call via keyword arguments.
-      attr_accessor :on_error, :before_dispatch, :after_dispatch
-      attr_writer :timeout
-
-      def timeout
-        return @timeout if defined?(@timeout)
-
-        30
-      end
+      attr_accessor :on_error
 
       # JSON string in, JSON string out. Full round-trip for HTTP/socket integrations.
       #
@@ -47,21 +35,20 @@ module Clamo
       end
 
       def parsed_dispatch_to_object(request:, object:,
-                                    timeout: self.timeout,
                                     on_error: self.on_error,
-                                    before_dispatch: self.before_dispatch,
-                                    after_dispatch: self.after_dispatch,
                                     **opts)
         raise ArgumentError, "object is required" unless object
 
         request = normalize_request_keys(request)
-        config = Config.new(timeout: timeout, on_error: on_error,
-                            before_dispatch: before_dispatch, after_dispatch: after_dispatch)
+        config = Config.new(on_error: on_error)
 
         response_for(request: request, object: object, config: config, **opts) do |method, params|
           dispatch_to_ruby(object: object, method: method, params: params)
         end
       end
+
+      alias dispatch parsed_dispatch_to_object
+      alias dispatch_json unparsed_dispatch_to_object
 
       private
 
@@ -113,6 +100,10 @@ module Clamo
           return request.key?("id") ? method_not_found_error(request) : nil
         end
 
+        unless params_match_arity?(object: object, method: request["method"], params: request["params"])
+          return request.key?("id") ? arity_mismatch_error(request) : nil
+        end
+
         return dispatch_notification(request, block, config) unless request.key?("id")
 
         dispatch_request(request, block, config)
@@ -128,10 +119,17 @@ module Clamo
           return result ? [result] : nil
         end
 
-        result = Parallel.map(request, **opts) do |item|
+        result = map_batch(request, **opts) do |item|
           response_for_single_request(request: item, object: object, block: block, config: config)
         end.compact
         result.empty? ? nil : result
+      end
+
+      def map_batch(items, **, &)
+        require "parallel"
+        Parallel.map(items, **, &)
+      rescue LoadError
+        items.map(&)
       end
 
       def validate_request_structure(request)
@@ -154,12 +152,14 @@ module Clamo
         JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::METHOD_NOT_FOUND)
       end
 
+      def arity_mismatch_error(request)
+        JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INVALID_PARAMS)
+      end
+
       def dispatch_notification(request, block, config)
         method = request["method"]
         params = request["params"]
-        config.before_dispatch&.call(method, params)
-        result = with_timeout(config.timeout) { block.yield(method, params) }
-        config.after_dispatch&.call(method, params, result)
+        block.yield(method, params)
         nil
       rescue StandardError => e
         config.on_error&.call(e, method, params)
@@ -169,34 +169,58 @@ module Clamo
       def dispatch_request(request, block, config)
         method = request["method"]
         params = request["params"]
-        config.before_dispatch&.call(method, params)
-        result = with_timeout(config.timeout) { block.yield(method, params) }
-        config.after_dispatch&.call(method, params, result)
+        result = block.yield(method, params)
         JSONRPC.build_result_response(id: request["id"], result: result)
-      rescue Timeout::Error
-        timeout_error(request)
       rescue StandardError => e
         config.on_error&.call(e, method, params)
         JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INTERNAL_ERROR)
       end
 
-      def timeout_error(request)
-        JSONRPC.build_error_response(
-          id: request["id"],
-          error: {
-            code: JSONRPC::ProtocolErrors::SERVER_ERROR.code,
-            message: JSONRPC::ProtocolErrors::SERVER_ERROR.message,
-            data: "Request timed out"
-          }
-        )
+      def params_match_arity?(object:, method:, params:)
+        ruby_method = resolve_method(object, method)
+        return true unless ruby_method
+
+        parameters = ruby_method.parameters
+
+        case params
+        when Array then array_params_match?(parameters, params.size)
+        when Hash  then hash_params_match?(parameters, params.transform_keys(&:to_sym).keys)
+        when nil   then nil_params_match?(parameters)
+        else true
+        end
       end
 
-      def with_timeout(seconds, &block)
-        if seconds
-          Timeout.timeout(seconds, &block)
-        else
-          block.call
-        end
+      def resolve_method(object, method_name)
+        object.method(method_name.to_sym)
+      rescue NameError
+        nil
+      end
+
+      def array_params_match?(parameters, count)
+        by_type = parameters.group_by(&:first)
+
+        return false if by_type.key?(:keyreq)
+        return true if by_type.key?(:rest)
+
+        required = by_type.fetch(:req, []).size
+        count.between?(required, required + by_type.fetch(:opt, []).size)
+      end
+
+      def hash_params_match?(parameters, keys)
+        by_type = parameters.group_by(&:first)
+        required = by_type.fetch(:keyreq, []).map(&:last)
+        allowed = required + by_type.fetch(:key, []).map(&:last)
+
+        return false if by_type.key?(:req)
+        return false unless (required - keys).empty?
+
+        by_type.key?(:keyrest) || (keys - allowed).empty?
+      end
+
+      def nil_params_match?(parameters)
+        by_type = parameters.group_by(&:first)
+
+        by_type.fetch(:req, []).empty? && !by_type.key?(:keyreq)
       end
     end
   end

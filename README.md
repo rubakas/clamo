@@ -35,22 +35,24 @@ json_response = Clamo::Server.handle(
 # => '{"jsonrpc":"2.0","result":3,"id":1}'
 ```
 
-If you need the parsed hash instead of a JSON string, use the lower-level methods:
+If you need the parsed hash instead of a JSON string, use the lower-level methods directly or via their shorter aliases:
 
 ```ruby
 # From a JSON string
-response = Clamo::Server.unparsed_dispatch_to_object(
+response = Clamo::Server.dispatch_json(
   request: '{"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1}',
   object: MyService
 )
 # => {"jsonrpc" => "2.0", "result" => 3, "id" => 1}
 
 # From a pre-parsed hash
-response = Clamo::Server.parsed_dispatch_to_object(
+response = Clamo::Server.dispatch(
   request: { "jsonrpc" => "2.0", "method" => "add", "params" => [1, 2], "id" => 1 },
   object: MyService
 )
 ```
+
+`dispatch` is an alias for `parsed_dispatch_to_object`; `dispatch_json` is an alias for `unparsed_dispatch_to_object`. The longer names still work.
 
 ### Handling Different Parameter Types
 
@@ -76,7 +78,7 @@ batch_request = <<~JSON
 ]
 JSON
 
-batch_response = Clamo::Server.unparsed_dispatch_to_object(
+batch_response = Clamo::Server.dispatch_json(
   request: batch_request,
   object: MyService
 )
@@ -91,7 +93,7 @@ Notifications are requests without an ID field. They don't produce a response:
 
 ```ruby
 notification = '{"jsonrpc": "2.0", "method": "add", "params": [1, 2]}'
-response = Clamo::Server.unparsed_dispatch_to_object(
+response = Clamo::Server.dispatch_json(
   request: notification,
   object: MyService
 )
@@ -124,20 +126,12 @@ Clamo follows the JSON-RPC 2.0 specification for error handling:
 | -32700     | Parse error      | Invalid JSON was received                            |
 | -32600     | Invalid request  | The JSON sent is not a valid Request object          |
 | -32601     | Method not found | The method does not exist / is not available         |
-| -32602     | Invalid params   | Invalid method parameter(s)                          |
+| -32602     | Invalid params   | Invalid method parameter(s) or arity mismatch        |
 | -32603     | Internal error   | Internal JSON-RPC error                              |
-| -32000     | Server error     | Reserved for implementation-defined server errors    |
+
+Parameter arity is validated before dispatch. If the number of positional arguments or keyword arguments doesn't match the Ruby method signature, a `-32602 Invalid params` error is returned.
 
 ## Configuration
-
-### Timeout
-
-Every method dispatch is wrapped in a timeout. The default is 30 seconds. Timed-out requests return a `-32000 Server error` response.
-
-```ruby
-Clamo::Server.timeout = 10  # seconds
-Clamo::Server.timeout = nil # disable timeout
-```
 
 ### Error Callback
 
@@ -149,32 +143,15 @@ Clamo::Server.on_error = ->(exception, method, params) {
 }
 ```
 
-### Dispatch Hooks
-
-`before_dispatch` and `after_dispatch` run around every method call (requests and notifications). Raise in `before_dispatch` to halt execution:
-
-```ruby
-Clamo::Server.before_dispatch = ->(method, params) {
-  raise "unauthorized" unless allowed?(method)
-}
-
-Clamo::Server.after_dispatch = ->(method, params, result) {
-  Rails.logger.info("#{method} completed")
-}
-```
-
 ### Per-Call Configuration
 
-All configuration options can be overridden per-call. Module-level settings serve as defaults:
+Configuration can be overridden per-call. Module-level settings serve as defaults:
 
 ```ruby
 Clamo::Server.handle(
   request: body,
   object: MyService,
-  timeout: 5,
-  on_error: ->(e, method, params) { MyLogger.error(e) },
-  before_dispatch: ->(method, params) { authorize!(method) },
-  after_dispatch: ->(method, params, result) { track(method) }
+  on_error: ->(e, method, params) { MyLogger.error(e) }
 )
 ```
 
@@ -184,10 +161,10 @@ Per-call config is snapshotted at the start of each dispatch, so concurrent muta
 
 ### Parallel Processing
 
-Batch requests are processed in parallel using the [parallel](https://github.com/grosser/parallel) gem. You can pass options to `Parallel.map`:
+Batch requests are processed in parallel when the [parallel](https://github.com/grosser/parallel) gem is available. If `parallel` is not installed, batches fall back to sequential processing. You can pass options to `Parallel.map`:
 
 ```ruby
-Clamo::Server.parsed_dispatch_to_object(
+Clamo::Server.dispatch(
   request: batch_request,
   object: MyService,
   in_processes: 4  # Parallel processing option

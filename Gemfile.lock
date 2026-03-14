@@ -1,8 +1,7 @@
 PATH
   remote: .
   specs:
-    clamo (0.9.0)
-      parallel (~> 1.27)
+    clamo (0.10.0)
 
 GEM
   remote: https://rubygems.org/
@@ -47,6 +46,7 @@ PLATFORMS
 DEPENDENCIES
   clamo!
   minitest (~> 5.16)
+  parallel (~> 1.27)
   rake (~> 13.0)
   rubocop (~> 1.21)
 
