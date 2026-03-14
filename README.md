@@ -172,6 +172,17 @@ Clamo::Server.dispatch(
 )
 ```
 
+## Roadmap
+
+- [ ] Method metadata caching
+- [ ] Method allowlists/denylists
+- [ ] Observability and logging
+- [ ] Profiling
+- [ ] Hooks
+- [ ] Rack helpers and framework helpers (Rails)
+- [ ] Autodoc (Markdown?)
+- [ ] Schemas
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
