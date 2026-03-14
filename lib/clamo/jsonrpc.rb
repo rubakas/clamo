@@ -14,23 +14,6 @@ module Clamo
     end
 
     class << self
-      def proper_pragma?(request)
-        fetch_indifferent(request, "jsonrpc") == "2.0"
-      end
-
-      def proper_method?(request)
-        fetch_indifferent(request, "method").is_a?(String)
-      end
-
-      def proper_id_if_any?(request)
-        if key_indifferent?(request, "id")
-          id = fetch_indifferent(request, "id")
-          id.is_a?(String) || id.is_a?(Integer) || id.is_a?(NilClass)
-        else
-          true
-        end
-      end
-
       def proper_params_if_any?(request)
         if key_indifferent?(request, "params")
           params = fetch_indifferent(request, "params")
@@ -95,6 +78,23 @@ module Clamo
       end
 
       private
+
+      def proper_pragma?(request)
+        fetch_indifferent(request, "jsonrpc") == "2.0"
+      end
+
+      def proper_method?(request)
+        fetch_indifferent(request, "method").is_a?(String)
+      end
+
+      def proper_id_if_any?(request)
+        if key_indifferent?(request, "id")
+          id = fetch_indifferent(request, "id")
+          id.is_a?(String) || id.is_a?(Integer) || id.is_a?(NilClass)
+        else
+          true
+        end
+      end
 
       def validate_params_type!(params)
         return if params.is_a?(Array) || params.is_a?(Hash)

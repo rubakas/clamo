@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0] - 2026-03-14
+
+### Added
+
+- `Clamo::Server.timeout` — per-dispatch timeout with 30-second default; returns `-32000 Server error` on timeout for requests, calls `on_error` for notifications. Set to `nil` to disable.
+- MIT LICENSE file and `spec.license` in gemspec
+- Indifferent key access in JSONRPC validators (symbol and string keys both accepted)
+- Tests for string ids, arity mismatch, single-item batches, and handle+timeout (77 tests / 105 assertions)
+
+### Changed
+
+- `proper_pragma?`, `proper_method?`, `proper_id_if_any?` moved from public to private API on `Clamo::JSONRPC`
+- Notifications with invalid params type now return `nil` instead of an error response (spec compliance)
+- `parsed_dispatch_to_object` now validates `object:` argument (raises `ArgumentError` if nil)
+- Single-item batches skip `Parallel.map` overhead
+- Gemspec description expanded (no longer identical to summary)
+- README updated with `Server.handle`, `timeout`, and `on_error` documentation
+
+### Removed
+
+- `Clamo::Error` base exception class (unused)
+- `sig/clamo.rbs` type signatures (misleadingly incomplete)
+- Dead `else` branch in `dispatch_to_ruby`
+
 ## [0.6.0] - 2026-03-14
 
 ### Added

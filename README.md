@@ -26,15 +26,30 @@ module MyService
   end
 end
 
-# Handle a JSON-RPC request
-request_body = '{"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1}'
-response = Clamo::Server.unparsed_dispatch_to_object(
-  request: request_body,
+# JSON string in, JSON string out — the primary entry point for HTTP/socket integrations.
+# Returns nil for notifications (no response expected).
+json_response = Clamo::Server.handle(
+  request: '{"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1}',
   object: MyService
 )
+# => '{"jsonrpc":"2.0","result":3,"id":1}'
+```
 
-puts response
+If you need the parsed hash instead of a JSON string, use the lower-level methods:
+
+```ruby
+# From a JSON string
+response = Clamo::Server.unparsed_dispatch_to_object(
+  request: '{"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1}',
+  object: MyService
+)
 # => {jsonrpc: "2.0", result: 3, id: 1}
+
+# From a pre-parsed hash
+response = Clamo::Server.parsed_dispatch_to_object(
+  request: { "jsonrpc" => "2.0", "method" => "add", "params" => [1, 2], "id" => 1 },
+  object: MyService
+)
 ```
 
 ### Handling Different Parameter Types
@@ -113,11 +128,32 @@ Clamo follows the JSON-RPC 2.0 specification for error handling:
 | -32603     | Internal error   | Internal JSON-RPC error                              |
 | -32000     | Server error     | Reserved for implementation-defined server errors    |
 
+## Configuration
+
+### Timeout
+
+Every method dispatch is wrapped in a timeout. The default is 30 seconds. Timed-out requests return a `-32000 Server error` response.
+
+```ruby
+Clamo::Server.timeout = 10  # seconds
+Clamo::Server.timeout = nil # disable timeout
+```
+
+### Error Callback
+
+Notifications don't return responses, so errors during notification dispatch are silent by default. Use `on_error` to capture them:
+
+```ruby
+Clamo::Server.on_error = ->(exception, method, params) {
+  Rails.logger.error("#{method} failed: #{exception.message}")
+}
+```
+
 ## Advanced Features
 
 ### Parallel Processing
 
-Batch requests are processed in parallel using the [parallel](https://github.com/grosser/parallel) gem. You can pass options to `Parallel.map` via the `parsed_dispatch_to_object` method:
+Batch requests are processed in parallel using the [parallel](https://github.com/grosser/parallel) gem. You can pass options to `Parallel.map`:
 
 ```ruby
 Clamo::Server.parsed_dispatch_to_object(
