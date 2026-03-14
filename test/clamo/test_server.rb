@@ -484,6 +484,67 @@ class TestServerAfterDispatch < Minitest::Test
   end
 end
 
+class TestServerPerCallConfig < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def test_per_call_timeout_overrides_default
+    response = Clamo::Server.parsed_dispatch_to_object(
+      request: jsonrpc_request(method: "method_slow", params: [1], id: 1),
+      object: TestFixtures::ExampleService,
+      timeout: 0.01
+    )
+
+    assert_equal(-32_000, response[:error][:code])
+  end
+
+  def test_per_call_on_error_overrides_default
+    captured = []
+    response = Clamo::Server.parsed_dispatch_to_object(
+      request: jsonrpc_request(method: "method_that_raises", id: 1),
+      object: TestFixtures::ExampleService,
+      on_error: ->(e, method, _params) { captured << { error: e, method: method } }
+    )
+
+    assert_equal(-32_603, response[:error][:code])
+    assert_equal 1, captured.size
+    assert_equal "something went wrong", captured[0][:error].message
+  end
+
+  def test_per_call_before_dispatch
+    captured = []
+    Clamo::Server.parsed_dispatch_to_object(
+      request: jsonrpc_request(method: "method_no_params_number", id: 1),
+      object: TestFixtures::ExampleService,
+      before_dispatch: ->(method, _params) { captured << method }
+    )
+
+    assert_equal ["method_no_params_number"], captured
+  end
+
+  def test_per_call_config_does_not_affect_module_defaults
+    assert_nil Clamo::Server.before_dispatch
+
+    Clamo::Server.parsed_dispatch_to_object(
+      request: jsonrpc_request(method: "method_no_params_number", id: 1),
+      object: TestFixtures::ExampleService,
+      before_dispatch: ->(_m, _p) {}
+    )
+
+    assert_nil Clamo::Server.before_dispatch
+  end
+
+  def test_per_call_config_flows_through_handle
+    response = Clamo::Server.handle(
+      request: '{"jsonrpc": "2.0", "method": "method_slow", "params": [1], "id": 1}',
+      object: TestFixtures::ExampleService,
+      timeout: 0.01
+    )
+
+    parsed = JSON.parse(response, symbolize_names: true)
+    assert_equal(-32_000, parsed[:error][:code])
+  end
+end
+
 class TestServerArgumentValidation < Minitest::Test
   def test_nil_object_raises_argument_error
     assert_raises(ArgumentError) do

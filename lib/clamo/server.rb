@@ -6,20 +6,13 @@ require "timeout"
 
 module Clamo
   module Server
-    class << self
-      # Global error callback for notification failures.
-      # This is module-level state shared across all callers.
-      # Set to any callable (lambda, method, proc) that accepts (exception, method, params).
-      #
-      #   Clamo::Server.on_error = ->(e, method, params) { Rails.logger.error(e) }
-      #
-      attr_accessor :on_error, :before_dispatch, :after_dispatch
+    Config = Data.define(:timeout, :on_error, :before_dispatch, :after_dispatch)
 
-      # Maximum seconds allowed for a single method dispatch. Defaults to 30.
-      # Set to nil to disable.
-      #
-      #   Clamo::Server.timeout = 10
-      #
+    class << self
+      # Module-level defaults. These are snapshotted at the start of each
+      # dispatch call, so mutations mid-request do not affect in-flight work.
+      # All four can be overridden per-call via keyword arguments.
+      attr_accessor :on_error, :before_dispatch, :after_dispatch
       attr_writer :timeout
 
       def timeout
@@ -53,12 +46,19 @@ module Clamo
         parsed_dispatch_to_object(request: parsed, object: object, **)
       end
 
-      def parsed_dispatch_to_object(request:, object:, **opts)
+      def parsed_dispatch_to_object(request:, object:,
+                                    timeout: self.timeout,
+                                    on_error: self.on_error,
+                                    before_dispatch: self.before_dispatch,
+                                    after_dispatch: self.after_dispatch,
+                                    **opts)
         raise ArgumentError, "object is required" unless object
 
         request = normalize_request_keys(request)
+        config = Config.new(timeout: timeout, on_error: on_error,
+                            before_dispatch: before_dispatch, after_dispatch: after_dispatch)
 
-        response_for(request: request, object: object, **opts) do |method, params|
+        response_for(request: request, object: object, config: config, **opts) do |method, params|
           dispatch_to_ruby(object: object, method: method, params: params)
         end
       end
@@ -88,18 +88,18 @@ module Clamo
       # Extra keyword arguments (**) are forwarded to response_for_batch only,
       # where they become options for Parallel.map (e.g., in_processes: 4).
       # For single requests they are silently ignored.
-      def response_for(request:, object:, **, &block)
+      def response_for(request:, object:, config:, **, &block)
         case request
         when Array
-          response_for_batch(request: request, object: object, block: block, **)
+          response_for_batch(request: request, object: object, block: block, config: config, **)
         when Hash
-          response_for_single_request(request: request, object: object, block: block)
+          response_for_single_request(request: request, object: object, block: block, config: config)
         else
           JSONRPC.build_error_response_from(id: nil, descriptor: JSONRPC::ProtocolErrors::INVALID_REQUEST)
         end
       end
 
-      def response_for_single_request(request:, object:, block:)
+      def response_for_single_request(request:, object:, block:, config:)
         error = validate_request_structure(request)
         return error if error
 
@@ -107,23 +107,23 @@ module Clamo
           return request.key?("id") ? method_not_found_error(request) : nil
         end
 
-        return dispatch_notification(request, block) unless request.key?("id")
+        return dispatch_notification(request, block, config) unless request.key?("id")
 
-        dispatch_request(request, block)
+        dispatch_request(request, block, config)
       end
 
-      def response_for_batch(request:, object:, block:, **opts)
+      def response_for_batch(request:, object:, block:, config:, **opts)
         if request.empty?
           return JSONRPC.build_error_response_from(id: nil, descriptor: JSONRPC::ProtocolErrors::INVALID_REQUEST)
         end
 
         if request.size == 1
-          result = response_for_single_request(request: request.first, object: object, block: block)
+          result = response_for_single_request(request: request.first, object: object, block: block, config: config)
           return result ? [result] : nil
         end
 
         result = Parallel.map(request, **opts) do |item|
-          response_for_single_request(request: item, object: object, block: block)
+          response_for_single_request(request: item, object: object, block: block, config: config)
         end.compact
         result.empty? ? nil : result
       end
@@ -148,29 +148,29 @@ module Clamo
         JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::METHOD_NOT_FOUND)
       end
 
-      def dispatch_notification(request, block)
+      def dispatch_notification(request, block, config)
         method = request["method"]
         params = request["params"]
-        before_dispatch&.call(method, params)
-        with_timeout { block.yield(method, params) }
-        after_dispatch&.call(method, params, nil)
+        config.before_dispatch&.call(method, params)
+        with_timeout(config.timeout) { block.yield(method, params) }
+        config.after_dispatch&.call(method, params, nil)
         nil
       rescue StandardError => e
-        on_error&.call(e, method, params)
+        config.on_error&.call(e, method, params)
         nil
       end
 
-      def dispatch_request(request, block)
+      def dispatch_request(request, block, config)
         method = request["method"]
         params = request["params"]
-        before_dispatch&.call(method, params)
-        result = with_timeout { block.yield(method, params) }
-        after_dispatch&.call(method, params, result)
+        config.before_dispatch&.call(method, params)
+        result = with_timeout(config.timeout) { block.yield(method, params) }
+        config.after_dispatch&.call(method, params, result)
         JSONRPC.build_result_response(id: request["id"], result: result)
       rescue Timeout::Error
         timeout_error(request)
       rescue StandardError => e
-        on_error&.call(e, method, params)
+        config.on_error&.call(e, method, params)
         JSONRPC.build_error_response_from(id: request["id"], descriptor: JSONRPC::ProtocolErrors::INTERNAL_ERROR)
       end
 
@@ -185,9 +185,9 @@ module Clamo
         )
       end
 
-      def with_timeout(&block)
-        if timeout
-          Timeout.timeout(timeout, &block)
+      def with_timeout(seconds, &block)
+        if seconds
+          Timeout.timeout(seconds, &block)
         else
           block.call
         end

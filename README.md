@@ -163,6 +163,23 @@ Clamo::Server.after_dispatch = ->(method, params, result) {
 }
 ```
 
+### Per-Call Configuration
+
+All configuration options can be overridden per-call. Module-level settings serve as defaults:
+
+```ruby
+Clamo::Server.handle(
+  request: body,
+  object: MyService,
+  timeout: 5,
+  on_error: ->(e, method, params) { MyLogger.error(e) },
+  before_dispatch: ->(method, params) { authorize!(method) },
+  after_dispatch: ->(method, params, result) { track(method) }
+)
+```
+
+Per-call config is snapshotted at the start of each dispatch, so concurrent mutations to module-level settings cannot affect in-flight requests.
+
 ## Advanced Features
 
 ### Parallel Processing

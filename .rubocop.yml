@@ -11,6 +11,9 @@ Metrics/ModuleLength:
 Metrics/ClassLength:
   Enabled: false
 
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+
 Style/Documentation:
   Enabled: false
 

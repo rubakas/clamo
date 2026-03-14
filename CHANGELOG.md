@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.0] - 2026-03-14
+
+### Added
+
+- `before_dispatch` and `after_dispatch` hooks — run around every method call (requests and notifications). Raise in `before_dispatch` to halt execution; `after_dispatch` fires only on success with `(method, params, result)`.
+- Per-call configuration — `timeout`, `on_error`, `before_dispatch`, and `after_dispatch` can be passed as keyword arguments to `handle`, `unparsed_dispatch_to_object`, and `parsed_dispatch_to_object`, overriding module-level defaults.
+- `Clamo::Server::Config` — immutable `Data` struct that snapshots configuration at the start of each dispatch, eliminating race conditions from concurrent mutations to module-level settings.
+
+### Changed
+
+- Internal error responses no longer include `e.message` in the `data` field, preventing leakage of internal details to clients. Exceptions are routed through `on_error` instead.
+- `parsed_dispatch_to_object` normalizes request keys to strings at the boundary, fixing silent dispatch failures when callers pass symbol-key hashes.
+- `on_error` is now called for request dispatch errors (previously only for notification errors).
+- Test suite expanded to 95 tests / 138 assertions.
+
 ## [0.7.0] - 2026-03-14
 
 ### Added

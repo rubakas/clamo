@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    clamo (0.7.0)
+    clamo (0.8.0)
       parallel (~> 1.27)
 
 GEM
