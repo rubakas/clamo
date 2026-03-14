@@ -74,7 +74,13 @@ module Clamo
       end
 
       def method_known?(object:, method:)
-        object.public_methods(false).map(&:to_sym).include?(method.to_sym)
+        name = method.to_sym
+        if object.is_a?(Module)
+          object.singleton_class.public_method_defined?(name, false)
+        else
+          object.class.public_method_defined?(name, false) ||
+            object.singleton_class.public_method_defined?(name, false)
+        end
       end
 
       def dispatch_to_ruby(object:, method:, params:)
@@ -152,8 +158,8 @@ module Clamo
         method = request["method"]
         params = request["params"]
         config.before_dispatch&.call(method, params)
-        with_timeout(config.timeout) { block.yield(method, params) }
-        config.after_dispatch&.call(method, params, nil)
+        result = with_timeout(config.timeout) { block.yield(method, params) }
+        config.after_dispatch&.call(method, params, result)
         nil
       rescue StandardError => e
         config.on_error&.call(e, method, params)

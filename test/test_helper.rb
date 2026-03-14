@@ -109,11 +109,11 @@ module JSONRPCTestHelpers
   end
 
   def expected_result(id:, result:)
-    { jsonrpc: "2.0", result: result, id: id }
+    { "jsonrpc" => "2.0", "result" => result, "id" => id }
   end
 
   def expected_error(id:, descriptor:)
-    { jsonrpc: "2.0", id: id, error: { code: descriptor.code, message: descriptor.message } }
+    { "jsonrpc" => "2.0", "id" => id, "error" => { "code" => descriptor.code, "message" => descriptor.message } }
   end
 
   def parse_error_response

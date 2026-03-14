@@ -67,11 +67,11 @@ class TestServerValidation < Minitest::Test
   def test_method_that_raises_returns_internal_error
     response = dispatch(jsonrpc_request(method: "method_that_raises", id: 1))
 
-    assert_equal "2.0", response[:jsonrpc]
-    assert_equal 1, response[:id]
-    assert_equal(-32_603, response[:error][:code])
-    assert_equal "Internal error", response[:error][:message]
-    refute response[:error].key?(:data)
+    assert_equal "2.0", response["jsonrpc"]
+    assert_equal 1, response["id"]
+    assert_equal(-32_603, response["error"]["code"])
+    assert_equal "Internal error", response["error"]["message"]
+    refute response["error"].key?("data")
   end
 
   def test_method_that_raises_calls_on_error
@@ -90,13 +90,13 @@ class TestServerValidation < Minitest::Test
   def test_too_many_params_returns_internal_error
     response = dispatch(jsonrpc_request(method: "method_no_params_number", params: [1, 2], id: 1))
 
-    assert_equal(-32_603, response[:error][:code])
+    assert_equal(-32_603, response["error"]["code"])
   end
 
   def test_too_few_params_returns_internal_error
     response = dispatch(jsonrpc_request(method: "method_two_params_add", params: [1], id: 1))
 
-    assert_equal(-32_603, response[:error][:code])
+    assert_equal(-32_603, response["error"]["code"])
   end
 end
 
@@ -419,7 +419,7 @@ class TestServerBeforeDispatch < Minitest::Test
 
     response = dispatch(jsonrpc_request(method: "method_no_params_number", id: 1))
 
-    assert_equal(-32_603, response[:error][:code])
+    assert_equal(-32_603, response["error"]["code"])
   end
 
   def test_raising_halts_notification
@@ -471,7 +471,7 @@ class TestServerAfterDispatch < Minitest::Test
     assert_empty captured
   end
 
-  def test_called_for_notifications_with_nil_result
+  def test_called_for_notifications_with_result
     captured = []
     Clamo::Server.after_dispatch = lambda { |method, _params, result|
       captured << { method: method, result: result }
@@ -480,7 +480,7 @@ class TestServerAfterDispatch < Minitest::Test
     dispatch(jsonrpc_request(method: "method_no_params_number"))
 
     assert_equal 1, captured.size
-    assert_nil captured[0][:result]
+    assert_equal 42, captured[0][:result]
   end
 end
 
@@ -494,7 +494,7 @@ class TestServerPerCallConfig < Minitest::Test
       timeout: 0.01
     )
 
-    assert_equal(-32_000, response[:error][:code])
+    assert_equal(-32_000, response["error"]["code"])
   end
 
   def test_per_call_on_error_overrides_default
@@ -505,7 +505,7 @@ class TestServerPerCallConfig < Minitest::Test
       on_error: ->(e, method, _params) { captured << { error: e, method: method } }
     )
 
-    assert_equal(-32_603, response[:error][:code])
+    assert_equal(-32_603, response["error"]["code"])
     assert_equal 1, captured.size
     assert_equal "something went wrong", captured[0][:error].message
   end
@@ -584,9 +584,9 @@ class TestServerTimeout < Minitest::Test
   def test_request_timeout_returns_server_error
     response = dispatch(jsonrpc_request(method: "method_slow", params: [1], id: 1))
 
-    assert_equal(-32_000, response[:error][:code])
-    assert_equal "Server error", response[:error][:message]
-    assert_equal "Request timed out", response[:error][:data]
+    assert_equal(-32_000, response["error"]["code"])
+    assert_equal "Server error", response["error"]["message"]
+    assert_equal "Request timed out", response["error"]["data"]
   end
 
   def test_notification_timeout_calls_on_error
@@ -605,12 +605,12 @@ class TestServerTimeout < Minitest::Test
     Clamo::Server.timeout = nil
     response = dispatch(jsonrpc_request(method: "method_no_params_number", id: 1))
 
-    assert_equal 42, response[:result]
+    assert_equal 42, response["result"]
   end
 
   def test_fast_method_succeeds_within_timeout
     response = dispatch(jsonrpc_request(method: "method_no_params_number", id: 1))
 
-    assert_equal 42, response[:result]
+    assert_equal 42, response["result"]
   end
 end

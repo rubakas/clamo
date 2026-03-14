@@ -35,26 +35,26 @@ module Clamo
 
         validate_params_type!(opts[:params]) if opts.key?(:params)
 
-        { jsonrpc: "2.0", method: opts[:method] }
-          .then { |r| opts.key?(:params) ? r.merge(params: opts[:params]) : r }
-          .then { |r| opts.key?(:id) ? r.merge(id: opts[:id]) : r }
+        { "jsonrpc" => "2.0", "method" => opts[:method] }
+          .then { |r| opts.key?(:params) ? r.merge("params" => opts[:params]) : r }
+          .then { |r| opts.key?(:id) ? r.merge("id" => opts[:id]) : r }
       end
 
       def build_result_response(id:, result:)
-        { jsonrpc: "2.0", result: result, id: id }
+        { "jsonrpc" => "2.0", "result" => result, "id" => id }
       end
 
       def build_error_response(**opts)
         raise ArgumentError, "error code is required" unless opts.dig(:error, :code)
         raise ArgumentError, "error message is required" unless opts.dig(:error, :message)
 
-        { jsonrpc: "2.0",
-          id: opts[:id],
-          error: {
-            code: opts.dig(:error, :code),
-            message: opts.dig(:error, :message),
-            data: opts.dig(:error, :data)
-          }.reject { |k, _| k == :data && !opts[:error].key?(:data) } }
+        { "jsonrpc" => "2.0",
+          "id" => opts[:id],
+          "error" => {
+            "code" => opts.dig(:error, :code),
+            "message" => opts.dig(:error, :message),
+            "data" => opts.dig(:error, :data)
+          }.reject { |k, _| k == "data" && !opts[:error].key?(:data) } }
       end
 
       def build_error_response_from(descriptor:, id: nil)

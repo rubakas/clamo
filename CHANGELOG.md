@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.0] - 2026-03-14
+
+### Changed
+
+- **Breaking:** All response and request builder hashes now use string keys (`"jsonrpc"`, `"result"`, `"id"`, `"error"`) instead of symbol keys. This makes the entire pipeline consistent — `JSON.parse` produces string keys, `normalize_request_keys` uses string keys, and now responses match. Callers using the lower-level `parsed_dispatch_to_object` or `unparsed_dispatch_to_object` must update hash access from `response[:result]` to `response["result"]`. The `handle` method (JSON string in/out) is unaffected.
+- `after_dispatch` hook now receives the actual return value for notifications. Previously always passed `nil`; now passes the value returned by the dispatched method.
+
+### Fixed
+
+- **Security:** `method_known?` no longer exposes inherited `Module` methods (`define_method`, `class_eval`, `const_set`, `freeze`, `include`, and 55 others) on module-based service objects. The previous `public_methods(false)` implementation included these; the new `public_method_defined?` check restricts dispatch to methods explicitly defined on the service object.
+
+### Internal
+
+- `method_known?` replaced array-allocating `public_methods(false).map(&:to_sym).include?` with zero-allocation `public_method_defined?` lookups. Handles both module targets (singleton class) and class instance targets (class + singleton class).
+
 ## [0.8.0] - 2026-03-14
 
 ### Added

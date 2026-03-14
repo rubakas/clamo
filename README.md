@@ -43,7 +43,7 @@ response = Clamo::Server.unparsed_dispatch_to_object(
   request: '{"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1}',
   object: MyService
 )
-# => {jsonrpc: "2.0", result: 3, id: 1}
+# => {"jsonrpc" => "2.0", "result" => 3, "id" => 1}
 
 # From a pre-parsed hash
 response = Clamo::Server.parsed_dispatch_to_object(
@@ -82,7 +82,7 @@ batch_response = Clamo::Server.unparsed_dispatch_to_object(
 )
 
 puts batch_response
-# => [{jsonrpc: "2.0", result: 3, id: 1}, {jsonrpc: "2.0", result: 2, id: 2}]
+# => [{"jsonrpc" => "2.0", "result" => 3, "id" => 1}, {"jsonrpc" => "2.0", "result" => 2, "id" => 2}]
 ```
 
 ### Notifications
@@ -112,7 +112,7 @@ request = Clamo::JSONRPC.build_request(
 )
 
 puts request
-# => {jsonrpc: "2.0", method: "add", params: [1, 2], id: 1}
+# => {"jsonrpc" => "2.0", "method" => "add", "params" => [1, 2], "id" => 1}
 ```
 
 ## Error Handling
