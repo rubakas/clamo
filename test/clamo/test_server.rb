@@ -19,7 +19,7 @@ class TestServerValidation < Minitest::Test
 
   def test_invalid_pragma
     assert_equal invalid_request_response(id: 1),
-                 dispatch({ "xmlrpc" => "2.0", "method" => "method_one_params_echo", "params" => "invalid", "id" => 1 })
+                 dispatch({ "xmlrpc" => "2.0", "method" => "method_one_params_echo", "id" => 1 })
   end
 
   def test_invalid_pragma_version
@@ -53,6 +53,37 @@ class TestServerValidation < Minitest::Test
 
   def test_notification_with_invalid_params_returns_nil
     assert_nil dispatch(jsonrpc_request(method: "method_one_params_echo", params: "invalid"))
+  end
+
+  def test_private_method_request_returns_method_not_found
+    assert_equal method_not_found_response(id: 1),
+                 dispatch(jsonrpc_request(method: "secret_method", id: 1))
+  end
+
+  def test_private_method_notification_silently_ignored
+    assert_nil dispatch(jsonrpc_request(method: "secret_method"))
+  end
+
+  def test_method_that_raises_returns_internal_error
+    response = dispatch(jsonrpc_request(method: "method_that_raises", id: 1))
+
+    assert_equal "2.0", response[:jsonrpc]
+    assert_equal 1, response[:id]
+    assert_equal(-32_603, response[:error][:code])
+    assert_equal "Internal error", response[:error][:message]
+    assert_equal "something went wrong", response[:error][:data]
+  end
+
+  def test_too_many_params_returns_internal_error
+    response = dispatch(jsonrpc_request(method: "method_no_params_number", params: [1, 2], id: 1))
+
+    assert_equal(-32_603, response[:error][:code])
+  end
+
+  def test_too_few_params_returns_internal_error
+    response = dispatch(jsonrpc_request(method: "method_two_params_add", params: [1], id: 1))
+
+    assert_equal(-32_603, response[:error][:code])
   end
 end
 
@@ -140,35 +171,13 @@ class TestServerDispatch < Minitest::Test
   end
 
   def test_explicit_null_id_returns_response
-    request = { "jsonrpc" => "2.0", "method" => "method_no_params_number", "id" => nil }
-    assert_equal expected_result(id: nil, result: 42), dispatch(request)
-  end
-end
-
-class TestServerSecurity < Minitest::Test
-  include JSONRPCTestHelpers
-
-  def test_private_method_request_returns_method_not_found
-    assert_equal method_not_found_response(id: 1),
-                 dispatch(jsonrpc_request(method: "secret_method", id: 1))
+    assert_equal expected_result(id: nil, result: 42),
+                 dispatch(jsonrpc_request(method: "method_no_params_number", id: nil))
   end
 
-  def test_private_method_notification_silently_ignored
-    assert_nil dispatch(jsonrpc_request(method: "secret_method"))
-  end
-end
-
-class TestServerExceptionHandling < Minitest::Test
-  include JSONRPCTestHelpers
-
-  def test_method_that_raises_returns_internal_error
-    response = dispatch(jsonrpc_request(method: "method_that_raises", id: 1))
-
-    assert_equal "2.0", response[:jsonrpc]
-    assert_equal 1, response[:id]
-    assert_equal(-32_603, response[:error][:code])
-    assert_equal "Internal error", response[:error][:message]
-    assert_equal "something went wrong", response[:error][:data]
+  def test_string_id
+    assert_equal expected_result(id: "abc", result: 42),
+                 dispatch(jsonrpc_request(method: "method_no_params_number", id: "abc"))
   end
 end
 
@@ -229,6 +238,18 @@ class TestServerBatch < Minitest::Test
                         ])
   end
 
+  def test_single_item_batch
+    response = dispatch([jsonrpc_request(method: "method_no_params_number", id: 1)])
+
+    assert_instance_of Array, response
+    assert_equal 1, response.size
+    assert_equal expected_result(id: 1, result: 42), response[0]
+  end
+
+  def test_single_notification_batch_returns_nil
+    assert_nil dispatch([jsonrpc_request(method: "method_no_params_number")])
+  end
+
   def test_empty_array_returns_invalid_request
     assert_equal invalid_request_response, dispatch([])
   end
@@ -263,6 +284,19 @@ class TestServerHandle < Minitest::Test
     assert_instance_of Array, parsed
     assert_equal 1, parsed.size
     assert_equal 42, parsed[0][:result]
+  end
+
+  def test_returns_timeout_error_as_json
+    original_timeout = Clamo::Server.timeout
+    Clamo::Server.timeout = 0.1
+
+    json = handle('{"jsonrpc": "2.0", "method": "method_slow", "params": [1], "id": 1}')
+
+    parsed = JSON.parse(json, symbolize_names: true)
+    assert_equal(-32_000, parsed[:error][:code])
+    assert_equal "Request timed out", parsed[:error][:data]
+  ensure
+    Clamo::Server.timeout = original_timeout
   end
 end
 
@@ -332,14 +366,6 @@ class TestServerArgumentValidation < Minitest::Test
       )
     end
   end
-
-  def test_invalid_params_type_returns_invalid_params_error
-    response = Clamo::Server.parsed_dispatch_to_object(
-      request: { "jsonrpc" => "2.0", "method" => "method_one_params_echo", "params" => 42, "id" => 1 },
-      object: TestFixtures::ExampleService
-    )
-    assert_equal(-32_602, response[:error][:code])
-  end
 end
 
 class TestServerTimeout < Minitest::Test
@@ -355,8 +381,7 @@ class TestServerTimeout < Minitest::Test
   end
 
   def test_default_timeout_is_thirty_seconds
-    Clamo::Server.remove_instance_variable(:@timeout) if Clamo::Server.instance_variable_defined?(:@timeout)
-    assert_equal 30, Clamo::Server.timeout
+    assert_equal 30, @original_timeout
   end
 
   def test_request_timeout_returns_server_error
