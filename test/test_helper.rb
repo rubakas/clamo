@@ -5,6 +5,7 @@ require "clamo"
 
 require "minitest/autorun"
 require "minitest/pride"
+require "minitest/mock"
 
 module TestFixtures
   module ExampleService
@@ -108,21 +109,21 @@ module JSONRPCTestHelpers
   end
 
   def dispatch(request)
-    Clamo::Server.parsed_dispatch_to_object(
+    Clamo::Server.dispatch(
       object: TestFixtures::ExampleService,
       request: request
     )
   end
 
   def dispatch_raw(json)
-    Clamo::Server.unparsed_dispatch_to_object(
+    Clamo::Server.dispatch_json(
       object: TestFixtures::ExampleService,
       request: json
     )
   end
 
   def handle(json)
-    Clamo::Server.handle(
+    Clamo::Server.handle_json(
       object: TestFixtures::ExampleService,
       request: json
     )

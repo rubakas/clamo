@@ -35,7 +35,7 @@ class TestServerPerCallConfig < Minitest::Test
 
   def test_per_call_on_error_overrides_default
     captured = []
-    response = Clamo::Server.parsed_dispatch_to_object(
+    response = Clamo::Server.dispatch(
       request: jsonrpc_request(method: "method_that_raises", id: 1),
       object: TestFixtures::ExampleService,
       on_error: ->(e, method, _params) { captured << { error: e, method: method } }
@@ -49,7 +49,7 @@ class TestServerPerCallConfig < Minitest::Test
   def test_per_call_config_does_not_affect_module_defaults
     assert_nil Clamo::Server.on_error
 
-    Clamo::Server.parsed_dispatch_to_object(
+    Clamo::Server.dispatch(
       request: jsonrpc_request(method: "method_that_raises", id: 1),
       object: TestFixtures::ExampleService,
       on_error: ->(_e, _m, _p) {}
@@ -60,7 +60,7 @@ class TestServerPerCallConfig < Minitest::Test
 
   def test_per_call_config_flows_through_handle
     captured = []
-    Clamo::Server.handle(
+    Clamo::Server.handle_json(
       request: '{"jsonrpc": "2.0", "method": "method_that_raises", "id": 1}',
       object: TestFixtures::ExampleService,
       on_error: ->(e, method, _params) { captured << { error: e, method: method } }

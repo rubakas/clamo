@@ -28,7 +28,7 @@ end
 
 # JSON string in, JSON string out — the primary entry point for HTTP/socket integrations.
 # Returns nil for notifications (no response expected).
-json_response = Clamo::Server.handle(
+json_response = Clamo::Server.handle_json(
   request: '{"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1}',
   object: MyService
 )
@@ -52,7 +52,7 @@ response = Clamo::Server.dispatch(
 )
 ```
 
-`dispatch` is an alias for `parsed_dispatch_to_object`; `dispatch_json` is an alias for `unparsed_dispatch_to_object`. The longer names still work.
+The longer names `parsed_dispatch_to_object`, `unparsed_dispatch_to_object`, and `handle` still work as deprecated aliases.
 
 ### Handling Different Parameter Types
 
@@ -136,7 +136,7 @@ Parameter arity is validated before dispatch. If the number of positional argume
 
 ### Error Callback
 
-Errors during dispatch are reported through `on_error`. Notifications are silent by default (no response is sent); requests return a generic `-32603 Internal error` without leaking exception details. Use `on_error` to capture the full exception for logging:
+Errors during dispatch are reported through `on_error`. Notifications are silent by default (no response is sent); requests return a generic `-32000 Server error` without leaking exception details. Use `on_error` to capture the full exception for logging:
 
 ```ruby
 Clamo::Server.on_error = ->(exception, method, params) {
@@ -149,7 +149,7 @@ Clamo::Server.on_error = ->(exception, method, params) {
 Configuration can be overridden per-call. Module-level settings serve as defaults:
 
 ```ruby
-Clamo::Server.handle(
+Clamo::Server.handle_json(
   request: body,
   object: MyService,
   on_error: ->(e, method, params) { MyLogger.error(e) }

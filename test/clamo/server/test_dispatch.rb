@@ -195,15 +195,22 @@ end
 class TestServerAliases < Minitest::Test
   include JSONRPCTestHelpers
 
-  def test_dispatch_is_alias_for_parsed_dispatch_to_object
+  def test_parsed_dispatch_to_object_is_alias_for_dispatch
     request = jsonrpc_request(method: "method_no_params_number", id: 1)
     assert_equal expected_result(id: 1, result: 42),
-                 Clamo::Server.dispatch(request: request, object: TestFixtures::ExampleService)
+                 Clamo::Server.parsed_dispatch_to_object(request: request, object: TestFixtures::ExampleService)
   end
 
-  def test_dispatch_json_is_alias_for_unparsed_dispatch_to_object
+  def test_unparsed_dispatch_to_object_is_alias_for_dispatch_json
     json = '{"jsonrpc": "2.0", "method": "method_no_params_number", "id": 1}'
     assert_equal expected_result(id: 1, result: 42),
-                 Clamo::Server.dispatch_json(request: json, object: TestFixtures::ExampleService)
+                 Clamo::Server.unparsed_dispatch_to_object(request: json, object: TestFixtures::ExampleService)
+  end
+
+  def test_handle_is_alias_for_handle_json
+    json = '{"jsonrpc": "2.0", "method": "method_no_params_number", "id": 1}'
+    result = Clamo::Server.handle(request: json, object: TestFixtures::ExampleService)
+    parsed = JSON.parse(result, symbolize_names: true)
+    assert_equal({ jsonrpc: "2.0", result: 42, id: 1 }, parsed)
   end
 end

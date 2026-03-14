@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.11.0] - 2026-03-14
+
+### Changed
+
+- **Breaking:** `dispatch` is now the canonical name for `parsed_dispatch_to_object`. The old name remains as a deprecated alias.
+- **Breaking:** `dispatch_json` is now the canonical name for `unparsed_dispatch_to_object`. The old name remains as a deprecated alias.
+- **Breaking:** `handle_json` is now the canonical name for `handle`. The old name remains as a deprecated alias.
+
 ## [0.10.0] - 2026-03-14
 
 ### Removed

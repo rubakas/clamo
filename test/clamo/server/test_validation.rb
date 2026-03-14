@@ -103,7 +103,7 @@ end
 class TestServerArgumentValidation < Minitest::Test
   def test_nil_object_raises_argument_error
     assert_raises(ArgumentError) do
-      Clamo::Server.unparsed_dispatch_to_object(
+      Clamo::Server.dispatch_json(
         request: '{"jsonrpc": "2.0", "method": "test", "id": 1}',
         object: nil
       )
@@ -112,7 +112,7 @@ class TestServerArgumentValidation < Minitest::Test
 
   def test_nil_object_raises_argument_error_for_parsed_dispatch
     assert_raises(ArgumentError) do
-      Clamo::Server.parsed_dispatch_to_object(
+      Clamo::Server.dispatch(
         request: { "jsonrpc" => "2.0", "method" => "test", "id" => 1 },
         object: nil
       )

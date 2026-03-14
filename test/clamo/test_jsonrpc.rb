@@ -119,3 +119,23 @@ class TestJSONRPCBuildParseError < Minitest::Test
     )
   end
 end
+
+class TestJSONRPCProtocolErrorConstants < Minitest::Test
+  def test_internal_error_constant_exists_with_correct_values
+    descriptor = Clamo::JSONRPC::ProtocolErrors::INTERNAL_ERROR
+    assert_equal(-32_603, descriptor.code)
+    assert_equal "Internal error", descriptor.message
+  end
+
+  def test_internal_error_can_build_error_response
+    response = Clamo::JSONRPC.build_error_response_from(
+      id: 1,
+      descriptor: Clamo::JSONRPC::ProtocolErrors::INTERNAL_ERROR
+    )
+
+    assert_equal "2.0", response["jsonrpc"]
+    assert_equal 1, response["id"]
+    assert_equal(-32_603, response["error"]["code"])
+    assert_equal "Internal error", response["error"]["message"]
+  end
+end

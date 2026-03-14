@@ -11,18 +11,20 @@ module Clamo
 
       # JSON string in, JSON string out. Full round-trip for HTTP/socket integrations.
       #
-      #   Clamo::Server.handle(request: body, object: MyService)
+      #   Clamo::Server.handle_json(request: body, object: MyService)
       #
-      def handle(request:, object:, **)
-        response = unparsed_dispatch_to_object(request: request, object: object, **)
+      def handle_json(request:, object:, **)
+        response = dispatch_json(request: request, object: object, **)
         response&.to_json
       end
 
-      # Clamo::Server.unparsed_dispatch_to_object(
-      #   request:  request_body,
-      #   object:   MyModule
-      # )
-      def unparsed_dispatch_to_object(request:, object:, **)
+      alias handle handle_json
+
+      # JSON string in, parsed response out.
+      #
+      #   Clamo::Server.dispatch_json(request: json_string, object: MyModule)
+      #
+      def dispatch_json(request:, object:, **)
         raise ArgumentError, "object is required" unless object
 
         begin
@@ -31,12 +33,18 @@ module Clamo
           return JSONRPC.build_error_response_parse_error
         end
 
-        parsed_dispatch_to_object(request: parsed, object: object, **)
+        dispatch(request: parsed, object: object, **)
       end
 
-      def parsed_dispatch_to_object(request:, object:,
-                                    on_error: self.on_error,
-                                    **opts)
+      alias unparsed_dispatch_to_object dispatch_json
+
+      # Parsed hash in, parsed response out.
+      #
+      #   Clamo::Server.dispatch(request: hash_or_array, object: MyModule)
+      #
+      def dispatch(request:, object:,
+                   on_error: self.on_error,
+                   **opts)
         raise ArgumentError, "object is required" unless object
 
         request = normalize_request_keys(request)
@@ -47,8 +55,7 @@ module Clamo
         end
       end
 
-      alias dispatch parsed_dispatch_to_object
-      alias dispatch_json unparsed_dispatch_to_object
+      alias parsed_dispatch_to_object dispatch
 
       private
 
