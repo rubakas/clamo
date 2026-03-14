@@ -56,12 +56,22 @@ module Clamo
       def parsed_dispatch_to_object(request:, object:, **opts)
         raise ArgumentError, "object is required" unless object
 
+        request = normalize_request_keys(request)
+
         response_for(request: request, object: object, **opts) do |method, params|
           dispatch_to_ruby(object: object, method: method, params: params)
         end
       end
 
       private
+
+      def normalize_request_keys(request)
+        case request
+        when Hash  then request.transform_keys(&:to_s)
+        when Array then request.map { |r| r.is_a?(Hash) ? r.transform_keys(&:to_s) : r }
+        else request
+        end
+      end
 
       def method_known?(object:, method:)
         object.public_methods(false).map(&:to_sym).include?(method.to_sym)
@@ -161,13 +171,10 @@ module Clamo
           }
         )
       rescue StandardError => e
-        JSONRPC.build_error_response(
+        on_error&.call(e, request["method"], request["params"])
+        JSONRPC.build_error_response_from(
           id: request["id"],
-          error: {
-            code: JSONRPC::ProtocolErrors::INTERNAL_ERROR.code,
-            message: JSONRPC::ProtocolErrors::INTERNAL_ERROR.message,
-            data: e.message
-          }
+          descriptor: JSONRPC::ProtocolErrors::INTERNAL_ERROR
         )
       end
 

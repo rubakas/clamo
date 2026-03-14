@@ -71,7 +71,20 @@ class TestServerValidation < Minitest::Test
     assert_equal 1, response[:id]
     assert_equal(-32_603, response[:error][:code])
     assert_equal "Internal error", response[:error][:message]
-    assert_equal "something went wrong", response[:error][:data]
+    refute response[:error].key?(:data)
+  end
+
+  def test_method_that_raises_calls_on_error
+    captured = []
+    Clamo::Server.on_error = ->(e, method, _params) { captured << { error: e, method: method } }
+
+    dispatch(jsonrpc_request(method: "method_that_raises", id: 1))
+
+    assert_equal 1, captured.size
+    assert_equal "method_that_raises", captured[0][:method]
+    assert_equal "something went wrong", captured[0][:error].message
+  ensure
+    Clamo::Server.on_error = nil
   end
 
   def test_too_many_params_returns_internal_error
@@ -178,6 +191,41 @@ class TestServerDispatch < Minitest::Test
   def test_string_id
     assert_equal expected_result(id: "abc", result: 42),
                  dispatch(jsonrpc_request(method: "method_no_params_number", id: "abc"))
+  end
+end
+
+class TestServerSymbolKeyDispatch < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def test_symbol_key_request
+    request = { jsonrpc: "2.0", method: "method_no_params_number", id: 1 }
+    assert_equal expected_result(id: 1, result: 42), dispatch(request)
+  end
+
+  def test_symbol_key_request_with_params
+    request = { jsonrpc: "2.0", method: "method_two_params_add", params: [1, 2], id: 1 }
+    assert_equal expected_result(id: 1, result: 3), dispatch(request)
+  end
+
+  def test_symbol_key_notification
+    request = { jsonrpc: "2.0", method: "method_no_params_number" }
+    assert_nil dispatch(request)
+  end
+
+  def test_symbol_key_batch
+    response = dispatch([
+                          { jsonrpc: "2.0", method: "method_no_params_number", id: 1 },
+                          { jsonrpc: "2.0", method: "method_no_params_string", id: 2 }
+                        ])
+
+    assert_instance_of Array, response
+    assert_equal 2, response.size
+    assert_equal expected_result(id: 1, result: 42), response[0]
+    assert_equal expected_result(id: 2, result: "Hello world"), response[1]
+  end
+
+  def test_symbol_key_invalid_request
+    assert_equal invalid_request_response(id: 1), dispatch({ jsonrpc: "1.0", method: "test", id: 1 })
   end
 end
 

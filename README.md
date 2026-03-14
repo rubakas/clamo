@@ -141,7 +141,7 @@ Clamo::Server.timeout = nil # disable timeout
 
 ### Error Callback
 
-Notifications don't return responses, so errors during notification dispatch are silent by default. Use `on_error` to capture them:
+Errors during dispatch are reported through `on_error`. Notifications are silent by default (no response is sent); requests return a generic `-32603 Internal error` without leaking exception details. Use `on_error` to capture the full exception for logging:
 
 ```ruby
 Clamo::Server.on_error = ->(exception, method, params) {
