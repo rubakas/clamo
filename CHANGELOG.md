@@ -1,0 +1,77 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [0.6.0] - 2026-03-14
+
+### Added
+
+- `Clamo::Server.handle` — JSON string in, JSON string out entry point for HTTP/socket integrations
+- `Clamo::Server.on_error` callback for notification failure reporting
+- `Clamo::Error` base exception class
+
+### Changed
+
+- Notifications now dispatch synchronously instead of spawning a background thread per call; callers control their own concurrency
+- `build_error_response_from` accepts explicit `descriptor:` and `id:` keyword arguments instead of `**opts`
+- `build_error_response_parse_error` takes no arguments (always returns `id: nil`)
+- `parallel` dependency relaxed from `~> 1.27.0` to `~> 1.27`
+- Minimum Ruby version raised from 3.0 to 3.3
+
+### Removed
+
+- `JSONRPC.valid_params?` (use `JSONRPC.proper_params_if_any?` directly)
+- `JSONRPC::PROTOCOL_VERSION_PRAGMA` constant (unused)
+- `JSONRPC::ProtocolErrors::SERVER_ERROR_CODE_RANGE` constant (unused)
+
+### Fixed
+
+- **Security:** replaced `send` with `public_send` to prevent remote invocation of private methods
+- **Security:** `method_known?` now uses `public_methods(false)` to expose only explicitly defined methods
+- Notifications now validate method existence before dispatch (previously skipped validation)
+- Empty batch requests correctly return Invalid Request error per spec
+- All-notification batches return `nil` instead of empty array per spec
+- `build_error_response_from` no longer leaks the `:descriptor` key into the error response builder
+
+### Internal
+
+- `method_known?`, `dispatch_to_ruby`, `response_for` moved from public to private API
+- `response_for_single_request` extracted into focused private helpers
+- Test suite expanded from scaffold to 62 tests / 84 assertions covering validation, dispatch, security, error handling, batching, notifications, and argument edge cases
+- CI matrix set to Ruby 3.3, 3.4, 4.0
+
+## [0.5.0] - 2025-02-07
+
+### Changed
+
+- Updated README with detailed usage examples, error table, and batch/notification documentation
+
+## [0.4.0] - 2025-02-07
+
+### Fixed
+
+- Corrected gem metadata URLs
+
+## [0.3.0] - 2025-02-06
+
+### Added
+
+- Batch request support via `parallel` gem
+- Named parameter (Hash) dispatch
+- JSON-RPC 2.0 validation (pragma, method, id, params)
+- Protocol error constants (`PARSE_ERROR`, `INVALID_REQUEST`, etc.)
+- RuboCop configuration
+
+### Changed
+
+- Multiple version bumps during initial development
+
+## [0.1.0] - 2025-02-06
+
+### Added
+
+- Initial release
+- Basic JSON-RPC 2.0 server with positional parameter dispatch
+- `Clamo::JSONRPC` request/response builders
