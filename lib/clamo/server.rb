@@ -2,6 +2,7 @@
 
 require "json"
 require "parallel"
+require "timeout"
 
 module Clamo
   module Server
@@ -13,6 +14,19 @@ module Clamo
       #   Clamo::Server.on_error = ->(e, method, params) { Rails.logger.error(e) }
       #
       attr_accessor :on_error
+
+      # Maximum seconds allowed for a single method dispatch. Defaults to 30.
+      # Set to nil to disable.
+      #
+      #   Clamo::Server.timeout = 10
+      #
+      attr_writer :timeout
+
+      def timeout
+        return @timeout if defined?(@timeout)
+
+        30
+      end
 
       # JSON string in, JSON string out. Full round-trip for HTTP/socket integrations.
       #
@@ -125,7 +139,7 @@ module Clamo
       end
 
       def dispatch_notification(request, block)
-        block.yield request["method"], request["params"]
+        with_timeout { block.yield request["method"], request["params"] }
         nil
       rescue StandardError => e
         on_error&.call(e, request["method"], request["params"])
@@ -135,7 +149,16 @@ module Clamo
       def dispatch_request(request, block)
         JSONRPC.build_result_response(
           id: request["id"],
-          result: block.yield(request["method"], request["params"])
+          result: with_timeout { block.yield(request["method"], request["params"]) }
+        )
+      rescue Timeout::Error
+        JSONRPC.build_error_response(
+          id: request["id"],
+          error: {
+            code: JSONRPC::ProtocolErrors::SERVER_ERROR.code,
+            message: JSONRPC::ProtocolErrors::SERVER_ERROR.message,
+            data: "Request timed out"
+          }
         )
       rescue StandardError => e
         JSONRPC.build_error_response(
@@ -146,6 +169,14 @@ module Clamo
             data: e.message
           }
         )
+      end
+
+      def with_timeout(&block)
+        if timeout
+          Timeout.timeout(timeout, &block)
+        else
+          block.call
+        end
       end
     end
   end

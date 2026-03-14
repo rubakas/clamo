@@ -63,6 +63,11 @@ module TestFixtures
         raise "something went wrong"
       end
 
+      def method_slow(duration = 2)
+        sleep(duration)
+        "done"
+      end
+
       private
 
       def secret_method

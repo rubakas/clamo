@@ -341,3 +341,54 @@ class TestServerArgumentValidation < Minitest::Test
     assert_equal(-32_602, response[:error][:code])
   end
 end
+
+class TestServerTimeout < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def setup
+    @original_timeout = Clamo::Server.timeout
+    Clamo::Server.timeout = 0.1
+  end
+
+  def teardown
+    Clamo::Server.timeout = @original_timeout
+  end
+
+  def test_default_timeout_is_thirty_seconds
+    Clamo::Server.remove_instance_variable(:@timeout) if Clamo::Server.instance_variable_defined?(:@timeout)
+    assert_equal 30, Clamo::Server.timeout
+  end
+
+  def test_request_timeout_returns_server_error
+    response = dispatch(jsonrpc_request(method: "method_slow", params: [1], id: 1))
+
+    assert_equal(-32_000, response[:error][:code])
+    assert_equal "Server error", response[:error][:message]
+    assert_equal "Request timed out", response[:error][:data]
+  end
+
+  def test_notification_timeout_calls_on_error
+    captured = []
+    Clamo::Server.on_error = ->(e, method, _params) { captured << { error: e, method: method } }
+
+    dispatch(jsonrpc_request(method: "method_slow", params: [1]))
+
+    assert_equal 1, captured.size
+    assert_kind_of Timeout::Error, captured[0][:error]
+  ensure
+    Clamo::Server.on_error = nil
+  end
+
+  def test_nil_timeout_disables_enforcement
+    Clamo::Server.timeout = nil
+    response = dispatch(jsonrpc_request(method: "method_no_params_number", id: 1))
+
+    assert_equal 42, response[:result]
+  end
+
+  def test_fast_method_succeeds_within_timeout
+    response = dispatch(jsonrpc_request(method: "method_no_params_number", id: 1))
+
+    assert_equal 42, response[:result]
+  end
+end
