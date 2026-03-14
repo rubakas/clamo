@@ -136,7 +136,7 @@ Parameter arity is validated before dispatch. If the number of positional argume
 
 ### Error Callback
 
-Errors during dispatch are reported through `on_error`. Notifications are silent by default (no response is sent); requests return a generic `-32000 Server error` without leaking exception details. Use `on_error` to capture the full exception for logging:
+Errors during dispatch are reported through `on_error`, which is called for both requests and notifications. Notifications are silent by default (no response is sent to the client, but `on_error` still fires); requests return a generic `-32000 Server error` without leaking exception details. Use `on_error` to capture the full exception for logging:
 
 ```ruby
 Clamo::Server.on_error = ->(exception, method, params) {

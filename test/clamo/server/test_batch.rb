@@ -120,3 +120,47 @@ class TestServerBatchMixedErrors < Minitest::Test
     assert_equal expected_result(id: 1, result: 42), response[0]
   end
 end
+
+class TestServerBatchNonHashItems < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def test_batch_with_integer_item_returns_invalid_request
+    response = dispatch([
+                          jsonrpc_request(method: "method_no_params_number", id: 1),
+                          42
+                        ])
+
+    assert_equal 2, response.size
+    assert_equal expected_result(id: 1, result: 42), response[0]
+    assert_equal invalid_request_response, response[1]
+  end
+
+  def test_batch_with_string_item_returns_invalid_request
+    response = dispatch([
+                          jsonrpc_request(method: "method_no_params_number", id: 1),
+                          "not a hash"
+                        ])
+
+    assert_equal 2, response.size
+    assert_equal expected_result(id: 1, result: 42), response[0]
+    assert_equal invalid_request_response, response[1]
+  end
+
+  def test_batch_with_null_item_returns_invalid_request
+    response = dispatch([
+                          jsonrpc_request(method: "method_no_params_number", id: 1),
+                          nil
+                        ])
+
+    assert_equal 2, response.size
+    assert_equal expected_result(id: 1, result: 42), response[0]
+    assert_equal invalid_request_response, response[1]
+  end
+
+  def test_batch_of_all_non_hash_items
+    response = dispatch([1, "two", nil])
+
+    assert_equal 3, response.size
+    response.each { |r| assert_equal invalid_request_response, r }
+  end
+end

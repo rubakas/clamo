@@ -191,7 +191,7 @@ module Clamo
 
         case params
         when Array then array_params_match?(parameters, params.size)
-        when Hash  then hash_params_match?(parameters, params.transform_keys(&:to_sym).keys)
+        when Hash  then hash_params_match?(parameters, params.keys.map(&:to_sym))
         when nil   then nil_params_match?(parameters)
         else true
         end
