@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    clamo (0.12.0)
+    clamo (1.0.0)
 
 GEM
   remote: https://rubygems.org/
