@@ -10,8 +10,8 @@ Gem::Specification.new do |spec|
   spec.license = "MIT"
 
   spec.summary = "JSON-RPC 2.0 server toolkit for Ruby"
-  spec.description = "Minimal, spec-compliant JSON-RPC 2.0 server for Ruby with request validation, " \
-                     "method dispatch, batch processing, and notification support."
+  spec.description = "Minimal, spec-compliant JSON-RPC 2.0 server for Ruby. Expose any module or class " \
+                     "as a JSON-RPC service with request validation, batch processing, and notification support."
   spec.homepage = "https://github.com/rubakas/clamo"
   spec.required_ruby_version = ">= 3.3.0"
 

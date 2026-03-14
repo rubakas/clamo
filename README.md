@@ -6,7 +6,9 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![JSON-RPC 2.0](https://img.shields.io/badge/JSON--RPC-2.0-orange.svg)](https://www.jsonrpc.org/specification)
 
-A Ruby implementation of [JSON-RPC 2.0](https://www.jsonrpc.org/specification) designed for simplicity and compliance with the specification.
+A Ruby implementation of [JSON-RPC 2.0](https://www.jsonrpc.org/specification) designed for simplicity and compliance with the specification. Expose any Ruby module or class as a JSON-RPC service with minimal effort — just point Clamo at your object and its public methods become callable.
+
+JSON-RPC 2.0 is the transport protocol behind [MCP](https://modelcontextprotocol.io/) and [LSP](https://microsoft.github.io/language-server-protocol/) — Clamo makes it easy to build spec-compliant services in Ruby.
 
 ## Table of Contents
 
