@@ -65,9 +65,7 @@ module Clamo
       end
 
       def build_result_response(id:, result:)
-        {}.merge(PROTOCOL_VERSION_PRAGMA)
-          .merge({ result: result })
-          .merge({ id: id })
+        { jsonrpc: "2.0", result: result, id: id }
       end
 
       def build_error_response(**opts)

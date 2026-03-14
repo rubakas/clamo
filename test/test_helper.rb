@@ -82,6 +82,13 @@ module JSONRPCTestHelpers
     )
   end
 
+  def handle(json)
+    Clamo::Server.handle(
+      object: TestFixtures::ExampleService,
+      request: json
+    )
+  end
+
   def expected_result(id:, result:)
     { jsonrpc: "2.0", result: result, id: id }
   end

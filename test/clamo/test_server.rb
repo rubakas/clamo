@@ -214,3 +214,65 @@ class TestServerBatch < Minitest::Test
     assert_equal invalid_request_response, dispatch([])
   end
 end
+
+class TestServerHandle < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def test_returns_json_string_for_request
+    json = handle('{"jsonrpc": "2.0", "method": "method_no_params_number", "id": 1}')
+
+    assert_instance_of String, json
+    parsed = JSON.parse(json, symbolize_names: true)
+    assert_equal({ jsonrpc: "2.0", result: 42, id: 1 }, parsed)
+  end
+
+  def test_returns_json_string_for_error
+    json = handle("not json")
+
+    parsed = JSON.parse(json, symbolize_names: true)
+    assert_equal(-32_700, parsed[:error][:code])
+  end
+
+  def test_returns_nil_for_notification
+    assert_nil handle('{"jsonrpc": "2.0", "method": "method_no_params_number"}')
+  end
+
+  def test_returns_json_array_for_batch
+    json = handle('[{"jsonrpc": "2.0", "method": "method_no_params_number", "id": 1}]')
+
+    parsed = JSON.parse(json, symbolize_names: true)
+    assert_instance_of Array, parsed
+    assert_equal 1, parsed.size
+    assert_equal 42, parsed[0][:result]
+  end
+end
+
+class TestServerOnError < Minitest::Test
+  include JSONRPCTestHelpers
+
+  def setup
+    @captured_errors = []
+    Clamo::Server.on_error = lambda { |e, method, _params|
+      @captured_errors << { error: e, method: method }
+    }
+  end
+
+  def teardown
+    Clamo::Server.on_error = nil
+  end
+
+  def test_notification_error_calls_on_error
+    dispatch(jsonrpc_request(method: "method_that_raises"))
+    sleep 0.1 # allow thread to execute
+
+    assert_equal 1, @captured_errors.size
+    assert_equal "method_that_raises", @captured_errors[0][:method]
+    assert_equal "something went wrong", @captured_errors[0][:error].message
+  end
+
+  def test_notification_error_without_callback_does_not_raise
+    Clamo::Server.on_error = nil
+    assert_nil dispatch(jsonrpc_request(method: "method_that_raises"))
+    sleep 0.1 # allow thread to finish without blowing up
+  end
+end

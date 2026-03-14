@@ -6,11 +6,27 @@ require "parallel"
 module Clamo
   module Server
     class << self
+      # Optional callback for notification errors.
+      # Set to any callable (lambda, method, proc) that accepts (exception, method, params).
+      #
+      #   Clamo::Server.on_error = ->(e, method, params) { Rails.logger.error(e) }
+      #
+      attr_accessor :on_error
+
+      # JSON string in, JSON string out. Full round-trip for HTTP/socket integrations.
+      #
+      #   Clamo::Server.handle(request: body, object: MyService)
+      #
+      def handle(request:, object:, **)
+        response = unparsed_dispatch_to_object(request: request, object: object, **)
+        response&.to_json
+      end
+
       # Clamo::Server.unparsed_dispatch_to_object(
       #   request:  request_body,
       #   object:   MyModule
       # )
-      def unparsed_dispatch_to_object(request:, object:, **opts)
+      def unparsed_dispatch_to_object(request:, object:, **)
         raise ArgumentError, "object is required" unless object
 
         begin
@@ -19,7 +35,7 @@ module Clamo
           return JSONRPC.build_error_response_parse_error
         end
 
-        parsed_dispatch_to_object(request: parsed, object: object, **opts)
+        parsed_dispatch_to_object(request: parsed, object: object, **)
       end
 
       def parsed_dispatch_to_object(request:, object:, **opts)
@@ -41,16 +57,18 @@ module Clamo
         end
       end
 
-      def response_for(request:, object:, **opts, &block)
+      def response_for(request:, object:, **, &block)
         case request
         when Array
-          response_for_batch(request: request, object: object, block: block, **opts)
+          response_for_batch(request: request, object: object, block: block, **)
         when Hash
           response_for_single_request(request: request, object: object, block: block)
         else
           JSONRPC.build_error_response_from(id: nil, descriptor: JSONRPC::ProtocolErrors::INVALID_REQUEST)
         end
       end
+
+      private
 
       def response_for_single_request(request:, object:, block:)
         error = validate_request_structure(request)
@@ -64,8 +82,6 @@ module Clamo
 
         dispatch_request(request, block)
       end
-
-      private
 
       def response_for_batch(request:, object:, block:, **opts)
         if request.empty?
@@ -98,8 +114,8 @@ module Clamo
       def dispatch_notification(request, block)
         Thread.new do
           block.yield request["method"], request["params"]
-        rescue StandardError
-          nil
+        rescue StandardError => e
+          on_error&.call(e, request["method"], request["params"])
         end
         nil
       end
